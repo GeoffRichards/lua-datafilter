@@ -60,6 +60,12 @@ md5_word32tobytes (const WORD32 *input, unsigned char *output) {
 static void
 md5_digest (const WORD32 *m, WORD32 *d) {
     int j;
+    WORD32 d_old[4];
+
+    d_old[0] = d[0];
+    d_old[1] = d[1];
+    d_old[2] = d[2];
+    d_old[3] = d[3];
 
     /* MD5 PASSO1 */
     for (j = 0; j < 4*4; j += 4) {
@@ -124,6 +130,11 @@ md5_digest (const WORD32 *m, WORD32 *d) {
         d[1] = rotate(d[1], 21);
         d[1] += d[2];
     }
+
+    d[0] += d_old[0];
+    d[1] += d_old[1];
+    d[2] += d_old[2];
+    d[3] += d_old[3];
 }
 
 static void
@@ -136,36 +147,6 @@ md5_bytestoword32 (WORD32 *x, const unsigned char *pt) {
                  (WORD32) pt[j+1]) << 8 |
                  (WORD32) pt[j];
     }
-}
-
-static void
-md5_put_length (WORD32 *x, long len) {
-    /* in bits! */
-    x[14] = (WORD32) ((len << 3) & 0xFFFFFFFF);
-    x[15] = (WORD32) (len >> (32 - 3) & 0x7);
-}
-
-/* returned status:
- * 0 - normal message (full 64 bytes)
- * 1 - enough room for 0x80, but not for message length (two 4-byte words)
- * 2 - enough room for 0x80 plus message length (at least 9 bytes free)
- */
-static int
-md5_converte (WORD32 *x, const unsigned char *pt, int num, int old_status) {
-    int new_status = 0;
-    unsigned char buff[64];
-    if (num < 64) {
-        memcpy(buff, pt, num);      /* to avoid changing original string */
-        memset(buff + num, 0, 64 - num);
-        if (old_status == 0)
-            buff[num] = 0x80;
-        new_status = 1;
-        pt = buff;
-    }
-    md5_bytestoword32(x, pt);
-    if (num <= (64 - 9))
-        new_status = 2;
-    return new_status;
 }
 
 typedef struct MD5State_ {
@@ -190,24 +171,40 @@ algo_md5 (Filter *filter,
 {
     MD5State *decoder_state = ALGO_STATE(filter);
     WORD32 *d = decoder_state->d;
-    int status = 0;
-    long i = 0;
-    long len = in_end - in;
-    assert(eof);    /* TODO - still a one-shot algo */
-    while (status != 2) {
-        WORD32 d_old[4];
-        WORD32 wbuff[16];
-        int numbytes = (len - i >= 64) ? 64 : len - i;
-        /* salva os valores do vetor digest */
-        d_old[0] = d[0]; d_old[1] = d[1]; d_old[2] = d[2]; d_old[3] = d[3];
-        status = md5_converte(wbuff, in + i, numbytes, status);
-        if (status == 2) {
-            md5_put_length(wbuff, len);
-            in += len;
-        }
+    WORD32 wbuff[16];
+    unsigned char buff[64];
+    unsigned long num_bits = (in_end - in) * 8;
+
+    while (in_end - in >= 64) {
+        md5_bytestoword32(wbuff, in);
         md5_digest(wbuff, d);
-        d[0] += d_old[0]; d[1] += d_old[1]; d[2] += d_old[2]; d[3] += d_old[3];
-        i += numbytes;
+        in += 64;
+    }
+
+    decoder_state->len_low += num_bits;
+    decoder_state->len_low &= 0xFFFFFFFF;
+    if (decoder_state->len_low < num_bits) {
+        ++decoder_state->len_high;
+        decoder_state->len_high &= 0xFFFFFFFF;
+    }
+
+    if (eof) {
+        int numbytes = in_end - in;
+        memcpy(buff, in, numbytes);
+        in += numbytes;
+        memset(buff + numbytes, 0, 64 - numbytes);
+        buff[numbytes] = 0x80;
+        md5_bytestoword32(wbuff, buff);
+
+        if (numbytes > 64 - 9) {
+            md5_digest(wbuff, d);
+            memset(buff, 0, 64);
+            md5_bytestoword32(wbuff, buff);
+        }
+
+        wbuff[14] = decoder_state->len_low;
+        wbuff[15] = decoder_state->len_high;
+        md5_digest(wbuff, d);
     }
 
     if (out_max - out < 16)
