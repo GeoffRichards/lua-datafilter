@@ -1,4 +1,6 @@
-/* The MD5 implementation in this file is derived from the one in the
+/* data.filter algorithm: md5
+ *
+ * The MD5 implementation in this file is derived from the one in the
  * Lua-MD5 library from the Kepler project.  It was originally written by
  * Roberto Ierusalimschy and Marcela Ozro Suarez, and is
  * Copyright (c) 2003-2007 PUC-Rio.
@@ -6,15 +8,13 @@
  * but is released under the same license, that of Lua 5.0.
  */
 
-#include <string.h>
-
 typedef unsigned long WORD32;
 
 /*
 ** Realiza a rotacao no sentido horario dos bits da variavel 'D' do tipo WORD32.
 ** Os bits sao deslocados de 'num' posicoes
 */
-#define rotate(D, num)  (D<<num) | (D>>(32-num))
+#define rotate(D, num) (D << num) | (D >> (32 - num))
 
 /* Macros que definem operacoes relizadas pelo algoritmo  md5 */
 #define F(x, y, z) (((x) & (y)) | ((~(x)) & (z)))
@@ -45,23 +45,15 @@ md5_T[64] = {
 #define T md5_T
 
 static void
-md5_word32tobytes (const WORD32 *input, char *output) {
+md5_word32tobytes (const WORD32 *input, unsigned char *output) {
     int j = 0;
     while (j<4*4) {
         WORD32 v = *input++;
-        output[j++] = (char) (v & 0xff); v >>= 8;
-        output[j++] = (char) (v & 0xff); v >>= 8;
-        output[j++] = (char) (v & 0xff); v >>= 8;
-        output[j++] = (char) (v & 0xff);
+        output[j++] = (v & 0xFF); v >>= 8;
+        output[j++] = (v & 0xFF); v >>= 8;
+        output[j++] = (v & 0xFF); v >>= 8;
+        output[j++] = (v & 0xFF);
     }
-}
-
-static void
-md5_inic_digest (WORD32 *d) {
-    d[0] = 0x67452301;
-    d[1] = 0xEFCDAB89;
-    d[2] = 0x98BADCFE;
-    d[3] = 0x10325476;
 }
 
 /* funcao que implemeta os quatro passos principais do algoritmo MD5 */
@@ -135,19 +127,19 @@ md5_digest (const WORD32 *m, WORD32 *d) {
 }
 
 static void
-md5_bytestoword32 (WORD32 *x, const char *pt) {
+md5_bytestoword32 (WORD32 *x, const unsigned char *pt) {
     int i;
     for (i = 0; i < 16; i++) {
         int j = i * 4;
-        x[i] = (((WORD32) (unsigned char) pt[j+3] << 8 |
-                 (WORD32) (unsigned char) pt[j+2]) << 8 |
-                 (WORD32) (unsigned char) pt[j+1]) << 8 |
-                 (WORD32) (unsigned char) pt[j];
+        x[i] = (((WORD32) pt[j+3] << 8 |
+                 (WORD32) pt[j+2]) << 8 |
+                 (WORD32) pt[j+1]) << 8 |
+                 (WORD32) pt[j];
     }
 }
 
 static void
-put_length (WORD32 *x, long len) {
+md5_put_length (WORD32 *x, long len) {
     /* in bits! */
     x[14] = (WORD32) ((len << 3) & 0xFFFFFFFF);
     x[15] = (WORD32) (len >> (32 - 3) & 0x7);
@@ -159,14 +151,14 @@ put_length (WORD32 *x, long len) {
  * 2 - enough room for 0x80 plus message length (at least 9 bytes free)
  */
 static int
-converte (WORD32 *x, const char *pt, int num, int old_status) {
+md5_converte (WORD32 *x, const unsigned char *pt, int num, int old_status) {
     int new_status = 0;
-    char buff[64];
+    unsigned char buff[64];
     if (num < 64) {
         memcpy(buff, pt, num);      /* to avoid changing original string */
         memset(buff + num, 0, 64 - num);
         if (old_status == 0)
-            buff[num] = '\200';
+            buff[num] = 0x80;
         new_status = 1;
         pt = buff;
     }
@@ -176,26 +168,53 @@ converte (WORD32 *x, const char *pt, int num, int old_status) {
     return new_status;
 }
 
-void
-md5 (const char *message, long len, char *output) {
+typedef struct MD5State_ {
     WORD32 d[4];
+    unsigned long len_low, len_high; /* assume 32 bit each for 64 bit length */
+} MD5State;
+
+static void
+algo_md5_init (Filter *filter) {
+    MD5State *decoder_state = ALGO_STATE(filter);
+    decoder_state->d[0] = 0x67452301;
+    decoder_state->d[1] = 0xEFCDAB89;
+    decoder_state->d[2] = 0x98BADCFE;
+    decoder_state->d[3] = 0x10325476;
+    decoder_state->len_low = decoder_state->len_high = 0;
+}
+
+static const unsigned char *
+algo_md5 (Filter *filter,
+          const unsigned char *in, const unsigned char *in_end,
+          unsigned char *out, unsigned char *out_max, int eof)
+{
+    MD5State *decoder_state = ALGO_STATE(filter);
+    WORD32 *d = decoder_state->d;
     int status = 0;
     long i = 0;
-    md5_inic_digest(d);
+    long len = in_end - in;
+    assert(eof);    /* TODO - still a one-shot algo */
     while (status != 2) {
         WORD32 d_old[4];
         WORD32 wbuff[16];
-        int numbytes = (len-i >= 64) ? 64 : len - i;
+        int numbytes = (len - i >= 64) ? 64 : len - i;
         /* salva os valores do vetor digest */
         d_old[0] = d[0]; d_old[1] = d[1]; d_old[2] = d[2]; d_old[3] = d[3];
-        status = converte(wbuff, message+i, numbytes, status);
-        if (status == 2)
-            put_length(wbuff, len);
+        status = md5_converte(wbuff, in + i, numbytes, status);
+        if (status == 2) {
+            md5_put_length(wbuff, len);
+            in += len;
+        }
         md5_digest(wbuff, d);
         d[0] += d_old[0]; d[1] += d_old[1]; d[2] += d_old[2]; d[3] += d_old[3];
         i += numbytes;
     }
-    md5_word32tobytes(d, output);
+
+    if (out_max - out < 16)
+        out = filter->do_output(filter, out);
+    md5_word32tobytes(d, out);
+    filter->buf_out_end = out + 16;
+    return in;
 }
 
 #undef rotate

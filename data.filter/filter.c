@@ -97,7 +97,8 @@ output_lbuf (Filter *filter, const unsigned char *out_end) {
     return filter->buf_out_end = filter->buf_out;
 }
 
-static int algo_wrapper (lua_State *L, const AlgorithmDefinition *def) {
+static int
+algo_wrapper (lua_State *L, const AlgorithmDefinition *def) {
     size_t len;
     unsigned char *s = (unsigned char *) luaL_checklstring(L, 1, &len);
     Filter *filter = make_filter(L, def);
@@ -125,17 +126,21 @@ static int algo_wrapper (lua_State *L, const AlgorithmDefinition *def) {
 }
 
 #include "algo/base64.c"
+#include "algo/md5.c"
 
 #define ALGO_WRAPPER_DECL(name, num) static int algowrap_##name (lua_State *L);
 ALGO_WRAPPER_DECL(base64_encode, 0)
 ALGO_WRAPPER_DECL(base64_decode, 1)
+ALGO_WRAPPER_DECL(md5, 2)
 #undef ALGO_WRAPPER_DECL
 
 #define ALGODEF(name) #name, algo_##name, algowrap_##name
-static const AlgorithmDefinition filter_algorithms[] = {
+static const AlgorithmDefinition
+filter_algorithms[] = {
     { ALGODEF(base64_encode), 0, 0, 0 },
     { ALGODEF(base64_decode), sizeof(Base64DecodeState),
       algo_base64_decode_init, 0 },
+    { ALGODEF(md5), sizeof(MD5State), algo_md5_init, 0 },
 };
 #undef ALGODEF
 #define NUM_ALGO_DEFS (sizeof(filter_algorithms) / sizeof(AlgorithmDefinition))
@@ -146,6 +151,7 @@ static int algowrap_##name (lua_State *L) { \
 }
 ALGO_WRAPPER_DEF(base64_encode, 0)
 ALGO_WRAPPER_DEF(base64_decode, 1)
+ALGO_WRAPPER_DEF(md5, 2)
 #undef ALGO_WRAPPER_DEF
 
 #ifdef EXTRA_C_TESTS
