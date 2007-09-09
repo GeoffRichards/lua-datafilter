@@ -1,0 +1,6 @@
+*.d
+*.lo
+*.o
+.libs
+core
+liblua-data.filter.la
