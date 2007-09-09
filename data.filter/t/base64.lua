@@ -33,6 +33,14 @@ function testcase:test_single_byte_decode ()
     end
 end
 
+function testcase:test_oo_encode ()
+    local obj = Filter:new("base64_encode")
+    obj:add("Aladdin")
+    obj:add(":")
+    obj:add("open sesame")
+    is("QWxhZGRpbjpvcGVuIHNlc2FtZQ==", obj:output())
+end
+
 misc_mapping = {
     -- Test data from RFC 4648, section 10
     [""] = "",

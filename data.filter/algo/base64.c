@@ -1,6 +1,7 @@
 /* data.filter algorithms: base64_encode, base64_decode */
 
-static const unsigned char base64_char_code[] = {
+static const unsigned char
+base64_char_code[] = {
     65,  66,  67,  68,  69,  70,  71,  72,      /* A - H */
     73,  74,  75,  76,  77,  78,  79,  80,      /* I - P */
     81,  82,  83,  84,  85,  86,  87,  88,      /* Q - X */
@@ -16,7 +17,8 @@ static const unsigned char base64_char_code[] = {
 /* 64 is padding character,
  * anything > 64 is character not in the normal base64 alphabet.
  */
-static const unsigned char base64_char_value[] = {
+static const unsigned char
+base64_char_value[] = {
     99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99,   /* 0   */
     99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99,   /* 16  */
     99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 62, 99, 99, 99, 63,   /* 32  */
@@ -53,7 +55,7 @@ algo_base64_encode (Filter *filter,
 
     while (in_end - in >= 3) {
         if (out_max - out < 4)
-            out = filter->do_output(filter, out);
+            out = filter->do_output(filter, out, &out_max);
         n = (in[0] << 16) | (in[1] << 8) | in[2];
         in += 3;
         *out++ = base64_char_code[n >> 18];
@@ -64,7 +66,7 @@ algo_base64_encode (Filter *filter,
 
     if (eof && in != in_end) {
         if (out_max - out < 4)
-            out = filter->do_output(filter, out);
+            out = filter->do_output(filter, out, &out_max);
         if (in + 1 == in_end) {     /* 1 byte remaining */
             n = *in++;
             *out++ = base64_char_code[n >> 2];
@@ -112,7 +114,7 @@ algo_base64_decode (Filter *filter,
 
     while (in_end - in >= 4) {
         if (out_max - out < 3)
-            out = filter->do_output(filter, out);
+            out = filter->do_output(filter, out, &out_max);
 
         for (i = 0; i < 4; ++i) {
             n[i] = base64_char_value[*in++];

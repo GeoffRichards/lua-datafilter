@@ -208,7 +208,7 @@ algo_md5 (Filter *filter,
     }
 
     if (out_max - out < 16)
-        out = filter->do_output(filter, out);
+        out = filter->do_output(filter, out, &out_max);
     md5_word32tobytes(d, out);
     filter->buf_out_end = out + 16;
     return in;
