@@ -173,13 +173,19 @@ algo_md5 (Filter *filter,
     WORD32 *d = decoder_state->d;
     WORD32 wbuff[16];
     unsigned char buff[64];
-    unsigned long num_bits = (in_end - in) * 8;
+    const unsigned char *in_start = in;
+    unsigned long num_bits;
 
     while (in_end - in >= 64) {
         md5_bytestoword32(wbuff, in);
         md5_digest(wbuff, d);
         in += 64;
     }
+
+    if (eof)
+        num_bits = (in_end - in_start) * 8;     /* everything that's left */
+    else
+        num_bits = (in - in_start) * 8;         /* just what's done so far */
 
     decoder_state->len_low += num_bits;
     decoder_state->len_low &= 0xFFFFFFFF;
@@ -205,12 +211,13 @@ algo_md5 (Filter *filter,
         wbuff[14] = decoder_state->len_low;
         wbuff[15] = decoder_state->len_high;
         md5_digest(wbuff, d);
+
+        if (out_max - out < 16)
+            out = filter->do_output(filter, out, &out_max);
+        md5_word32tobytes(d, out);
+        filter->buf_out_end = out + 16;
     }
 
-    if (out_max - out < 16)
-        out = filter->do_output(filter, out, &out_max);
-    md5_word32tobytes(d, out);
-    filter->buf_out_end = out + 16;
     return in;
 }
 
