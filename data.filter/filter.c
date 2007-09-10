@@ -110,10 +110,10 @@ output_string (Filter *filter, const unsigned char *out_end,
                unsigned char **out_max)
 {
     size_t new_size = filter->buf_out_size * 2;
-    unsigned char *out;
-    out = filter->alloc(filter->alloc_ud, filter->buf_out, filter->buf_out_size, new_size);
-    filter->buf_out = out;
+    unsigned char *out = filter->alloc(filter->alloc_ud, filter->buf_out,
+                                       filter->buf_out_size, new_size);
     filter->buf_out_end = out + (out_end - filter->buf_out);
+    filter->buf_out = out;
     filter->buf_out_size = new_size;
     *out_max = out + new_size;
     return filter->buf_out_end;
