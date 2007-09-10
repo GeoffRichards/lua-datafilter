@@ -50,5 +50,32 @@ function testcase:test_output_filename_big ()
     assert(os.remove(tmpname))
 end
 
+function testcase:test_output_function ()
+    local got = ""
+    local func = function (data) got = got .. data end
+    local obj = Filter:new("base64_encode", func)
+    obj:add("foobar")
+    obj:add("and some more")
+    obj:finish()
+    is("Zm9vYmFyYW5kIHNvbWUgbW9yZQ==", got)
+end
+
+function testcase:test_output_function_big ()
+    local got = ""
+    local func = function (data) got = got .. data end
+    local obj = Filter:new("base64_encode", func)
+    for _ = 1, 8192 do obj:add("abcdefghijkl") end
+    obj:finish()
+    is(131072, got:len())
+    is(big_expected, got)
+end
+
+function testcase:test_output_function_error ()
+    local func = function (data) error"grumpy callback function" end
+    local obj = Filter:new("base64_encode", func)
+    obj:add("foo")
+    assert_error("callback throws exception", function () obj:finish() end)
+end
+
 lunit.run()
 -- vi:ts=4 sw=4 expandtab

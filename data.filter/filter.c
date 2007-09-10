@@ -31,9 +31,9 @@ typedef struct Filter_ {
     AlgorithmFunction func;
     FilterOutputFunc do_output;
     AlgorithmDestroyFunction destroy_func;
-    /* TODO - need a destroy_output func as well, to flush any last output */
     int finished;
     FILE *c_fh;
+    int output_func_ref;
 } Filter;
 
 #define ALGO_STATE(filter) ((void *) (((char *) (filter)) + sizeof(Filter)))
@@ -65,6 +65,7 @@ init_filter (Filter *filter, lua_State *L, const AlgorithmDefinition *def) {
     filter->alloc_ud = alloc_ud;
     filter->finished = 0;
     filter->c_fh = 0;
+    filter->output_func_ref = LUA_NOREF;
 
     filter->buf_out = filter->buf_in = 0;
     filter->lbuf = 0;
@@ -96,6 +97,9 @@ filter_finished_cleanup (lua_State *L, Filter *filter) {
                        strerror(errno));
         filter->c_fh = 0;
     }
+
+    luaL_unref(L, LUA_REGISTRYINDEX, filter->output_func_ref);
+    filter->output_func_ref = LUA_NOREF;
 }
 
 static void
@@ -150,6 +154,20 @@ output_c_fh (Filter *filter, const unsigned char *out_end,
     assert(out_end > filter->buf_out);
     assert(out_end >= filter->buf_out_end);
     fwrite(filter->buf_out, 1, out_end - filter->buf_out, filter->c_fh);
+    return filter->buf_out_end = filter->buf_out;
+}
+
+static unsigned char *
+output_luafunc (Filter *filter, const unsigned char *out_end,
+                unsigned char **out_max)
+{
+    (void) out_max;     /* unused - it never changes */
+    assert(out_end > filter->buf_out);
+    assert(out_end >= filter->buf_out_end);
+    lua_rawgeti(filter->L, LUA_REGISTRYINDEX, filter->output_func_ref);
+    lua_pushlstring(filter->L, (const char *) filter->buf_out,
+                    out_end - filter->buf_out);
+    lua_call(filter->L, 1, 0);
     return filter->buf_out_end = filter->buf_out;
 }
 
@@ -266,6 +284,8 @@ filter_new (lua_State *L) {
     if (i == NUM_ALGO_DEFS)
         return luaL_argerror(L, 2, "unrecognized algorithm name");
 
+    /* Create the filter object.  This is on the stack, so if anything goes
+     * wrong after this Lua will be able to clean it up. */
     filter = lua_newuserdata(L, sizeof(Filter) + def->state_size);
     init_filter(filter, L, def);
     luaL_getmetatable(L, FILTER_MT_NAME);
@@ -289,6 +309,11 @@ filter_new (lua_State *L) {
                 return luaL_error(L, "error opening file '%s': %s", filename,
                                   strerror(errno));
             filter->do_output = output_c_fh;
+        }
+        else if (arg_type == LUA_TFUNCTION) {
+            lua_pushvalue(L, 3);
+            filter->output_func_ref = luaL_ref(L, LUA_REGISTRYINDEX);
+            filter->do_output = output_luafunc;
         }
         else
             return luaL_argerror(L, 2, "invalid type for output destination");
