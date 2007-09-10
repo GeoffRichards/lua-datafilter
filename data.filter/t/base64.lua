@@ -38,7 +38,7 @@ function testcase:test_oo_encode ()
     obj:add("Aladdin")
     obj:add(":")
     obj:add("open sesame")
-    is("QWxhZGRpbjpvcGVuIHNlc2FtZQ==", obj:output())
+    is("QWxhZGRpbjpvcGVuIHNlc2FtZQ==", obj:result())
 end
 
 misc_mapping = {

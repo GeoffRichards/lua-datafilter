@@ -47,20 +47,20 @@ end
 function testcase:test_from_file ()
     local obj = Filter:new("md5")
     obj:addfile("t/data/random1.dat")
-    is("a3f8e5cf50de466c81117093acace63a", bytes_to_hex(obj:output()),
+    is("a3f8e5cf50de466c81117093acace63a", bytes_to_hex(obj:result()),
        "addfile() on random1.dat")
 
     obj = Filter:new("md5")
     obj:addfile("t/data/random1.dat")
     obj:addfile("t/data/random1.dat")
-    is("b9054bf8fd1941b722ec172efdb7015e", bytes_to_hex(obj:output()),
+    is("b9054bf8fd1941b722ec172efdb7015e", bytes_to_hex(obj:result()),
        "addfile() on random1.dat * 2")
 
     obj = Filter:new("md5")
     obj:addfile("t/data/random1.dat")
     obj:addfile("t/data/random1.dat")
     obj:addfile("t/data/random1.dat")
-    is("b4950de76365266129ccad54c814fddc", bytes_to_hex(obj:output()),
+    is("b4950de76365266129ccad54c814fddc", bytes_to_hex(obj:result()),
        "addfile() on random1.dat * 3")
 
     obj = Filter:new("md5")
@@ -69,7 +69,7 @@ function testcase:test_from_file ()
     obj:add("another string between two copies of the random chunk of data")
     obj:addfile("t/data/random1.dat")
     obj:add("some stuff at the end, and this nul should be included: \0")
-    is("ef988d269b28ab947437648d63d68a56", bytes_to_hex(obj:output()),
+    is("ef988d269b28ab947437648d63d68a56", bytes_to_hex(obj:result()),
        "addfile() on random1.dat * 2 with strings mixed in")
 end
 

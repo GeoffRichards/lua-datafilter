@@ -33,6 +33,7 @@ typedef struct Filter_ {
     AlgorithmDestroyFunction destroy_func;
     /* TODO - need a destroy_output func as well, to flush any last output */
     int finished;
+    FILE *c_fh;
 } Filter;
 
 #define ALGO_STATE(filter) ((void *) (((char *) (filter)) + sizeof(Filter)))
@@ -63,6 +64,7 @@ init_filter (Filter *filter, lua_State *L, const AlgorithmDefinition *def) {
     filter->alloc = alloc;
     filter->alloc_ud = alloc_ud;
     filter->finished = 0;
+    filter->c_fh = 0;
 
     filter->buf_out = filter->buf_in = 0;
     filter->lbuf = 0;
@@ -79,7 +81,28 @@ init_filter (Filter *filter, lua_State *L, const AlgorithmDefinition *def) {
 }
 
 static void
-destroy_filter (Filter *filter) {
+filter_finished_cleanup (lua_State *L, Filter *filter) {
+    unsigned char *out_max;
+
+    filter->finished = 1;
+
+    out_max = filter->buf_out + filter->buf_out_size;
+    if (filter->buf_out_end != filter->buf_out)
+        filter->do_output(filter, filter->buf_out_end, &out_max);
+
+    if (filter->c_fh) {
+        if (fclose(filter->c_fh))
+            luaL_error(L, "error closing output file handle: %s",
+                       strerror(errno));
+        filter->c_fh = 0;
+    }
+}
+
+static void
+destroy_filter (lua_State *L, Filter *filter) {
+    if (!filter->finished)
+        filter_finished_cleanup(L, filter);
+
     if (filter->destroy_func)
         filter->destroy_func(filter);
     filter->destroy_func = 0;
@@ -119,6 +142,17 @@ output_string (Filter *filter, const unsigned char *out_end,
     return filter->buf_out_end;
 }
 
+static unsigned char *
+output_c_fh (Filter *filter, const unsigned char *out_end,
+             unsigned char **out_max)
+{
+    (void) out_max;     /* unused - it never changes */
+    assert(out_end > filter->buf_out);
+    assert(out_end >= filter->buf_out_end);
+    fwrite(filter->buf_out, 1, out_end - filter->buf_out, filter->c_fh);
+    return filter->buf_out_end = filter->buf_out;
+}
+
 static int
 algo_wrapper (lua_State *L, const AlgorithmDefinition *def) {
     size_t len;
@@ -127,7 +161,6 @@ algo_wrapper (lua_State *L, const AlgorithmDefinition *def) {
     const unsigned char *end;
     lua_Alloc alloc;
     void *alloc_ud;
-    unsigned char *out_max;
 
     alloc = lua_getallocf(L, &alloc_ud);
 
@@ -149,12 +182,10 @@ algo_wrapper (lua_State *L, const AlgorithmDefinition *def) {
                     filter->buf_out_end,
                     filter->buf_out + filter->buf_out_size, 1);
     assert(end == filter->buf_in + filter->buf_in_size);
-    out_max = filter->buf_out + filter->buf_out_size;
-    if (filter->buf_out_end != filter->buf_out)
-        filter->do_output(filter, filter->buf_out_end, &out_max);
+    filter_finished_cleanup(L, filter);
 
     luaL_pushresult(filter->lbuf);
-    destroy_filter(filter);
+    destroy_filter(L, filter);
     filter->alloc(filter->alloc_ud, filter, filter->filter_object_size, 0);
     return 1;
 }
@@ -211,34 +242,61 @@ contains_null_byte (const char *s, size_t len) {
 
 static int
 filter_new (lua_State *L) {
-    size_t algo_name_len;
+    size_t algo_name_len, filename_len;
     const char *algo_name = luaL_checklstring(L, 2, &algo_name_len);
+    const char *filename;
     unsigned int i;
     const AlgorithmDefinition *def;
     Filter *filter;
+    int num_args = lua_gettop(L);
+    int arg_type;
 
-    if (contains_null_byte(algo_name, algo_name_len))
-        return luaL_error(L, "invalid algorithm name '%s'", algo_name);
+    luaL_argcheck(L, !contains_null_byte(algo_name, algo_name_len), 2,
+                  "invalid algorithm name");
 
+    if (num_args > 3)
+        return luaL_error(L, "too many arguments to data.filter:new()");
+
+    /* Find the definition of the named algorithm. */
     def = filter_algorithms;
     for (i = 0; i < NUM_ALGO_DEFS; ++i, ++def) {
-        if (!strcmp(def->name, algo_name)) {
-            filter = lua_newuserdata(L, sizeof(Filter) + def->state_size);
-            init_filter(filter, L, def);
-            luaL_getmetatable(L, FILTER_MT_NAME);
-            lua_setmetatable(L, -2);
-
-            filter->buf_in = filter->buf_in_end
-                           = filter->alloc(filter->alloc_ud, 0, 0, BUFSIZ);
-            filter->buf_in_size = BUFSIZ;
-            filter->buf_in_free = 1;
-
-            filter->do_output = output_string;
-            return 1;
-        }
+        if (!strcmp(def->name, algo_name))
+            break;
     }
+    if (i == NUM_ALGO_DEFS)
+        return luaL_argerror(L, 2, "unrecognized algorithm name");
 
-    return luaL_error(L, "unrecognized algorithm name '%s'", algo_name);
+    filter = lua_newuserdata(L, sizeof(Filter) + def->state_size);
+    init_filter(filter, L, def);
+    luaL_getmetatable(L, FILTER_MT_NAME);
+    lua_setmetatable(L, -2);
+
+    filter->buf_in = filter->buf_in_end
+                   = filter->alloc(filter->alloc_ud, 0, 0, BUFSIZ);
+    filter->buf_in_size = BUFSIZ;
+    filter->buf_in_free = 1;
+    filter->do_output = 0;
+
+    /* Figure out where to send the output to. */
+    if (num_args >= 3 && !lua_isnil(L, 3)) {
+        arg_type = lua_type(L, 3);
+        if (arg_type == LUA_TSTRING || arg_type == LUA_TNUMBER) {
+            filename = lua_tolstring(L, 3, &filename_len);
+            luaL_argcheck(L, !contains_null_byte(filename, filename_len), 3,
+                          "invalid file name");
+            filter->c_fh = fopen(filename, "wb");
+            if (!filter->c_fh)
+                return luaL_error(L, "error opening file '%s': %s", filename,
+                                  strerror(errno));
+            filter->do_output = output_c_fh;
+        }
+        else
+            return luaL_argerror(L, 2, "invalid type for output destination");
+    }
+    else
+        filter->do_output = output_string;
+
+    return 1;
 }
 
 static int
@@ -288,8 +346,8 @@ filter_addfile (lua_State *L) {
     FILE *f;
     size_t bytes_read;
 
-    if (contains_null_byte(filename, filename_len))
-        return luaL_error(L, "invalid file name '%s'", filename);
+    luaL_argcheck(L, !contains_null_byte(filename, filename_len), 2,
+                  "invalid file name");
 
     if (filter->finished)
         return luaL_error(L, "output has been finalized, it's too late to"
@@ -328,7 +386,7 @@ filter_addfile (lua_State *L) {
 }
 
 static int
-filter_output (lua_State *L) {
+filter_result (lua_State *L) {
     Filter *filter = luaL_checkudata(L, 1, FILTER_MT_NAME);
     const unsigned char *left_over;
 
@@ -341,7 +399,7 @@ filter_output (lua_State *L) {
         filter->buf_out_end, filter->buf_out + filter->buf_out_size, 1);
     assert(left_over == filter->buf_in_end);
     filter->buf_in_end = filter->buf_in;
-    filter->finished = 1;
+    filter_finished_cleanup(L, filter);
 
     lua_pushlstring(L, (const char *) filter->buf_out,
                    filter->buf_out_end - filter->buf_out);
@@ -349,9 +407,27 @@ filter_output (lua_State *L) {
 }
 
 static int
+filter_finish (lua_State *L) {
+    Filter *filter = luaL_checkudata(L, 1, FILTER_MT_NAME);
+    const unsigned char *left_over;
+
+    if (filter->finished)
+        return luaL_error(L, "output has been finished");
+
+    left_over = filter->func(
+        filter, filter->buf_in, filter->buf_in_end,
+        filter->buf_out_end, filter->buf_out + filter->buf_out_size, 1);
+    assert(left_over == filter->buf_in_end);
+    filter->buf_in_end = filter->buf_in;
+    filter_finished_cleanup(L, filter);
+
+    return 0;
+}
+
+static int
 filter_gc (lua_State *L) {
     Filter *filter = luaL_checkudata(L, 1, FILTER_MT_NAME);
-    destroy_filter(filter);
+    destroy_filter(L, filter);
     return 0;
 }
 
@@ -400,8 +476,11 @@ luaopen_data_filter (lua_State *L) {
     lua_pushlstring(L, "addfile", 7);
     lua_pushcfunction(L, filter_addfile);
     lua_rawset(L, -3);
-    lua_pushlstring(L, "output", 6);
-    lua_pushcfunction(L, filter_output);
+    lua_pushlstring(L, "result", 6);
+    lua_pushcfunction(L, filter_result);
+    lua_rawset(L, -3);
+    lua_pushlstring(L, "finish", 6);
+    lua_pushcfunction(L, filter_finish);
     lua_rawset(L, -3);
     lua_pushlstring(L, "__gc", 4);
     lua_pushcfunction(L, filter_gc);
