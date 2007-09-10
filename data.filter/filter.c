@@ -198,6 +198,18 @@ test_internal_stuff (lua_State *L) {
 #endif
 
 static int
+contains_null_byte (const char *s, size_t len) {
+    size_t i;
+
+    for (i = 0; i < len; ++i) {
+        if (s[i] == '\0')
+            return 1;
+    }
+
+    return 0;
+}
+
+static int
 filter_new (lua_State *L) {
     size_t algo_name_len;
     const char *algo_name = luaL_checklstring(L, 2, &algo_name_len);
@@ -205,10 +217,8 @@ filter_new (lua_State *L) {
     const AlgorithmDefinition *def;
     Filter *filter;
 
-    for (i = 0; i < algo_name_len; ++i) {
-        if (algo_name[i] == '\0')
-            return luaL_error(L, "invalid algorithm name '%s'", algo_name);
-    }
+    if (contains_null_byte(algo_name, algo_name_len))
+        return luaL_error(L, "invalid algorithm name '%s'", algo_name);
 
     def = filter_algorithms;
     for (i = 0; i < NUM_ALGO_DEFS; ++i, ++def) {
@@ -270,6 +280,54 @@ filter_add (lua_State *L) {
 }
 
 static int
+filter_addfile (lua_State *L) {
+    Filter *filter = luaL_checkudata(L, 1, FILTER_MT_NAME);
+    size_t filename_len, max_bytes, bytes_left_over;
+    const char *filename = luaL_checklstring(L, 2, &filename_len);
+    unsigned char *left_over;
+    FILE *f;
+    size_t bytes_read;
+
+    if (contains_null_byte(filename, filename_len))
+        return luaL_error(L, "invalid file name '%s'", filename);
+
+    if (filter->finished)
+        return luaL_error(L, "output has been finalized, it's too late to"
+                          " add more input");
+
+    f = fopen(filename, "rb");
+    if (!f)
+        return luaL_error(L, "error opening file '%s': %s", filename,
+                          strerror(errno));
+
+    while (!feof(f)) {
+        /* Top up the input buffer with as much as we can fit in. */
+        max_bytes = filter->buf_in_size - (filter->buf_in_end - filter->buf_in);
+        errno = 0;
+        bytes_read = fread(filter->buf_in_end, 1, max_bytes, f);
+        if (errno)
+            return luaL_error(L, "error reading from file '%s': %s", filename,
+                              strerror(errno));
+
+        if (bytes_read > 0) {
+            filter->buf_in_end += bytes_read;
+            left_over = (unsigned char *) filter->func(
+                filter, filter->buf_in, filter->buf_in_end,
+                filter->buf_out_end, filter->buf_out + filter->buf_out_size, 0);
+            if (left_over != filter->buf_in) {
+                bytes_left_over = filter->buf_in_end - left_over;
+                if (bytes_left_over)
+                    memmove(filter->buf_in, left_over, bytes_left_over);
+                filter->buf_in_end = filter->buf_in + bytes_left_over;
+            }
+        }
+    }
+
+    fclose(f);
+    return 0;
+}
+
+static int
 filter_output (lua_State *L) {
     Filter *filter = luaL_checkudata(L, 1, FILTER_MT_NAME);
     const unsigned char *left_over;
@@ -282,6 +340,7 @@ filter_output (lua_State *L) {
         filter, filter->buf_in, filter->buf_in_end,
         filter->buf_out_end, filter->buf_out + filter->buf_out_size, 1);
     assert(left_over == filter->buf_in_end);
+    filter->buf_in_end = filter->buf_in;
     filter->finished = 1;
 
     lua_pushlstring(L, (const char *) filter->buf_out,
@@ -337,6 +396,9 @@ luaopen_data_filter (lua_State *L) {
     lua_rawset(L, -3);
     lua_pushlstring(L, "add", 3);
     lua_pushcfunction(L, filter_add);
+    lua_rawset(L, -3);
+    lua_pushlstring(L, "addfile", 7);
+    lua_pushcfunction(L, filter_addfile);
     lua_rawset(L, -3);
     lua_pushlstring(L, "output", 6);
     lua_pushcfunction(L, filter_output);
