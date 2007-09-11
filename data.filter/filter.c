@@ -7,7 +7,7 @@
 /* TODO - default off, control from makefile */
 #define EXTRA_C_TESTS
 
-#define FILTER_MT_NAME ("data.filter-" VERSION)
+#define FILTER_MT_NAME ("c3966aca-6037-11dc-9675-00e081225ce5-" VERSION)
 
 struct Filter_;
 typedef const unsigned char * (*AlgorithmFunction)
