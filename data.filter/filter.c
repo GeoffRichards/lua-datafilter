@@ -103,6 +103,35 @@ filter_finished_cleanup (lua_State *L, Filter *filter) {
 }
 
 static void
+add_input_data (Filter *filter, const unsigned char *data, size_t len) {
+    if (len > 0) {
+        memcpy(filter->buf_in_end, data, len);
+        filter->buf_in_end += len;
+    }
+}
+
+static void
+do_filtering (Filter *filter, int eof) {
+    size_t bytes_left_over;
+    unsigned char *left_over;
+
+    left_over = (unsigned char *) filter->func(
+        filter, filter->buf_in, filter->buf_in_end,
+        filter->buf_out_end, filter->buf_out + filter->buf_out_size, eof);
+
+    if (eof) {
+        assert(left_over == filter->buf_in_end);
+        filter->buf_in_end = filter->buf_in;
+    }
+    else if (left_over != filter->buf_in) {
+        bytes_left_over = filter->buf_in_end - left_over;
+        if (bytes_left_over)
+            memmove(filter->buf_in, left_over, bytes_left_over);
+        filter->buf_in_end = filter->buf_in + bytes_left_over;
+    }
+}
+
+static void
 destroy_filter (lua_State *L, Filter *filter) {
     if (!filter->finished)
         filter_finished_cleanup(L, filter);
@@ -176,7 +205,6 @@ algo_wrapper (lua_State *L, const AlgorithmDefinition *def) {
     size_t len;
     unsigned char *s = (unsigned char *) luaL_checklstring(L, 1, &len);
     Filter *filter;
-    const unsigned char *end;
     lua_Alloc alloc;
     void *alloc_ud;
 
@@ -186,7 +214,8 @@ algo_wrapper (lua_State *L, const AlgorithmDefinition *def) {
     assert(filter);
     init_filter(filter, L, def);
 
-    filter->buf_in = filter->buf_in_end = s;
+    filter->buf_in = s;
+    filter->buf_in_end = s + len;
     filter->buf_in_size = len;
     filter->buf_in_free = 0;
 
@@ -195,11 +224,7 @@ algo_wrapper (lua_State *L, const AlgorithmDefinition *def) {
     luaL_buffinit(L, filter->lbuf);
     filter->do_output = output_lbuf;
 
-    end = def->func(filter, filter->buf_in,
-                    filter->buf_in + filter->buf_in_size,
-                    filter->buf_out_end,
-                    filter->buf_out + filter->buf_out_size, 1);
-    assert(end == filter->buf_in + filter->buf_in_size);
+    do_filtering(filter, 1);
     filter_finished_cleanup(L, filter);
 
     luaL_pushresult(filter->lbuf);
@@ -327,10 +352,9 @@ filter_new (lua_State *L) {
 static int
 filter_add (lua_State *L) {
     Filter *filter = luaL_checkudata(L, 1, FILTER_MT_NAME);
-    size_t len, load_bytes, max_bytes, bytes_left_over;
+    size_t len, load_bytes, max_bytes;
     const unsigned char *s = (unsigned char *) luaL_checklstring(L, 2, &len);
     const unsigned char *s_end = s + len;
-    unsigned char *left_over;
 
     if (filter->finished)
         return luaL_error(L, "output has been finalized, it's too late to"
@@ -343,20 +367,10 @@ filter_add (lua_State *L) {
         if (load_bytes > max_bytes)
             load_bytes = max_bytes;
         assert(load_bytes > 0);
-        memcpy(filter->buf_in_end, s, load_bytes);
-        filter->buf_in_end += load_bytes;
-        s += load_bytes;
 
-        /* Process some more data, which will free up some space for more. */
-        left_over = (unsigned char *) filter->func(
-            filter, filter->buf_in, filter->buf_in_end,
-            filter->buf_out_end, filter->buf_out + filter->buf_out_size, 0);
-        if (left_over != filter->buf_in) {
-            bytes_left_over = filter->buf_in_end - left_over;
-            if (bytes_left_over)
-                memmove(filter->buf_in, left_over, bytes_left_over);
-            filter->buf_in_end = filter->buf_in + bytes_left_over;
-        }
+        add_input_data(filter, (const unsigned char *) s, load_bytes);
+        s += load_bytes;
+        do_filtering(filter, 0);
     }
 
     return 0;
@@ -364,8 +378,7 @@ filter_add (lua_State *L) {
 
 static void
 filter_addfile_filename (lua_State *L, Filter *filter, const char *filename) {
-    size_t max_bytes, bytes_read, bytes_left_over;
-    unsigned char *left_over;
+    size_t max_bytes, bytes_read;
     FILE *f;
 
     f = fopen(filename, "rb");
@@ -383,19 +396,8 @@ filter_addfile_filename (lua_State *L, Filter *filter, const char *filename) {
                        strerror(errno));
         }
 
-        /* Process as much as possible of what we've got. */
-        if (bytes_read > 0) {
-            filter->buf_in_end += bytes_read;
-            left_over = (unsigned char *) filter->func(
-                filter, filter->buf_in, filter->buf_in_end,
-                filter->buf_out_end, filter->buf_out + filter->buf_out_size, 0);
-            if (left_over != filter->buf_in) {
-                bytes_left_over = filter->buf_in_end - left_over;
-                if (bytes_left_over)
-                    memmove(filter->buf_in, left_over, bytes_left_over);
-                filter->buf_in_end = filter->buf_in + bytes_left_over;
-            }
-        }
+        filter->buf_in_end += bytes_read;
+        do_filtering(filter, 0);
     }
 
     fclose(f);
@@ -405,9 +407,8 @@ static void
 filter_addfile_function (lua_State *L, Filter *filter,
                          int handlepos, int funcpos)
 {
-    size_t bytes_read, bytes_left_over;
+    size_t bytes_read;
     const char *data;
-    unsigned char *left_over;
 
     while (1) {
         /* Top up the input buffer with as much as we can fit in. */
@@ -435,22 +436,8 @@ filter_addfile_function (lua_State *L, Filter *filter,
         }
 
         data = lua_tolstring(L, -2, &bytes_read);
-
-        /* Process as much as possible of what we've got. */
-        /* TODO - refactor with same stuff above */
-        if (bytes_read > 0) {
-            memcpy(filter->buf_in_end, data, bytes_read);
-            filter->buf_in_end += bytes_read;
-            left_over = (unsigned char *) filter->func(
-                filter, filter->buf_in, filter->buf_in_end,
-                filter->buf_out_end, filter->buf_out + filter->buf_out_size, 0);
-            if (left_over != filter->buf_in) {
-                bytes_left_over = filter->buf_in_end - left_over;
-                if (bytes_left_over)
-                    memmove(filter->buf_in, left_over, bytes_left_over);
-                filter->buf_in_end = filter->buf_in + bytes_left_over;
-            }
-        }
+        add_input_data(filter, (const unsigned char *) data, bytes_read);
+        do_filtering(filter, 0);
 
         lua_pop(L, 2);
     }
@@ -498,17 +485,12 @@ filter_addfile (lua_State *L) {
 static int
 filter_result (lua_State *L) {
     Filter *filter = luaL_checkudata(L, 1, FILTER_MT_NAME);
-    const unsigned char *left_over;
 
     if (filter->do_output != output_string)
         return luaL_error(L, "output sent elsewhere, not available as a"
                           " string");
 
-    left_over = filter->func(
-        filter, filter->buf_in, filter->buf_in_end,
-        filter->buf_out_end, filter->buf_out + filter->buf_out_size, 1);
-    assert(left_over == filter->buf_in_end);
-    filter->buf_in_end = filter->buf_in;
+    do_filtering(filter, 1);
     filter_finished_cleanup(L, filter);
 
     lua_pushlstring(L, (const char *) filter->buf_out,
@@ -519,16 +501,11 @@ filter_result (lua_State *L) {
 static int
 filter_finish (lua_State *L) {
     Filter *filter = luaL_checkudata(L, 1, FILTER_MT_NAME);
-    const unsigned char *left_over;
 
     if (filter->finished)
         return luaL_error(L, "output has been finished");
 
-    left_over = filter->func(
-        filter, filter->buf_in, filter->buf_in_end,
-        filter->buf_out_end, filter->buf_out + filter->buf_out_size, 1);
-    assert(left_over == filter->buf_in_end);
-    filter->buf_in_end = filter->buf_in;
+    do_filtering(filter, 1);
     filter_finished_cleanup(L, filter);
 
     return 0;
