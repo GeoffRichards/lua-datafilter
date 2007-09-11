@@ -173,5 +173,21 @@ function testcase:test_bad_usage ()
     assert_error("calling finish twice", function () obj:finish() end)
 end
 
+function testcase:test_reusing_file_handle ()
+    local tmpname = os.tmpname()
+    local fh = assert(io.open(tmpname, "wb"))
+    local obj = Filter:new("base64_encode", fh)
+    obj:add("foobar")
+    obj:finish()
+    fh:write("\n")
+    obj = Filter:new("base64_encode", fh)
+    obj:add("frobnitz")
+    obj:finish()
+    fh:write("\n")
+    fh:close()
+    is("Zm9vYmFy\nZnJvYm5pdHo=\n", read_file(tmpname))
+    assert(os.remove(tmpname))
+end
+
 lunit.run()
 -- vi:ts=4 sw=4 expandtab

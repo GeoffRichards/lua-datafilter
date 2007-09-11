@@ -273,6 +273,7 @@ algo_wrapper (lua_State *L, const AlgorithmDefinition *def) {
 
 #include "algo/base64.c"
 #include "algo/md5.c"
+#include "algo/hex.c"
 #include "algorithms.c"
 
 #ifdef EXTRA_C_TESTS
