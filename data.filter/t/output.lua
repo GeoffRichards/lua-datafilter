@@ -51,6 +51,84 @@ function testcase:test_output_filename_big ()
     assert(os.remove(tmpname))
 end
 
+function testcase:test_output_filename_write_error ()
+    assert_error("trying to write to a directory",
+                 function () Filter:new("base64_encode", "t") end)
+end
+
+function testcase:test_output_file_handle ()
+    local tmpname = os.tmpname()
+    local fh = assert(io.open(tmpname, "wb"))
+    local obj = Filter:new("base64_encode", fh)
+    obj:add("foobar")
+    obj:add("and some more")
+    obj:finish()
+    fh:close()
+    is("Zm9vYmFyYW5kIHNvbWUgbW9yZQ==", read_file(tmpname))
+    assert_error("output sent elsewhere", function () obj:result() end)
+    assert(os.remove(tmpname))
+end
+
+function testcase:test_output_file_handle_big ()
+    local tmpname = os.tmpname()
+    local fh = assert(io.open(tmpname, "wb"))
+    local obj = Filter:new("base64_encode", fh)
+    for _ = 1, 8192 do obj:add("abcdefghijkl") end
+    obj:finish()
+    fh:close()
+    local got = read_file(tmpname)
+    is(131072, got:len())
+    is(big_expected, got)
+    assert(os.remove(tmpname))
+end
+
+local function fake_file_handle_write (self, arg, extra)
+    assert_string(arg)
+    assert_nil(extra)
+    self.data = self.data .. arg
+    return true
+end
+
+function testcase:test_output_fake_file_handle ()
+    local fh = { data = "", write = fake_file_handle_write }
+    local obj = Filter:new("md5", fh)
+    obj:add("foobar")
+    obj:finish()
+    is("3858f62230ac3c915f300c664312c63f", bytes_to_hex(fh.data))
+end
+
+function testcase:test_output_fake_file_handle_mt ()
+    local fhmt = { write = fake_file_handle_write }
+    fhmt.__index = fhmt
+    local fh = { data = "" }
+    setmetatable(fh, fhmt)
+    local obj = Filter:new("md5", fh)
+    obj:add("foobar")
+    obj:finish()
+    is("3858f62230ac3c915f300c664312c63f", bytes_to_hex(fh.data))
+end
+
+function testcase:test_output_fake_file_handle_fail ()
+    local fh = { write = function () return nil, "buggerup" end }
+    local obj = Filter:new("md5", fh)
+    obj:add("foobar")
+    assert_error("'write' method reports failure",
+                 function () obj:finish() end)
+end
+
+function testcase:test_output_fake_file_handle_error ()
+    local fh = { write = function () error"grumpy write method" end }
+    local obj = Filter:new("md5", fh)
+    obj:add("foobar")
+    assert_error("'write' method dies", function () obj:finish() end)
+end
+
+function testcase:test_output_fake_file_handle_bad_write_method ()
+    local fh = { data = "", write = 123 }
+    assert_error("'write' method is not a function",
+                 function () Filter:new("md5", fh) end)
+end
+
 function testcase:test_output_function ()
     local got = ""
     local func = function (data) got = got .. data end

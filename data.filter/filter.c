@@ -33,7 +33,7 @@ typedef struct Filter_ {
     AlgorithmDestroyFunction destroy_func;
     int finished;
     FILE *c_fh;
-    int output_func_ref;
+    int output_func_ref, l_fh_ref;
 } Filter;
 
 #define ALGO_STATE(filter) ((void *) (((char *) (filter)) + sizeof(Filter)))
@@ -66,6 +66,7 @@ init_filter (Filter *filter, lua_State *L, const AlgorithmDefinition *def) {
     filter->finished = 0;
     filter->c_fh = 0;
     filter->output_func_ref = LUA_NOREF;
+    filter->l_fh_ref = LUA_NOREF;
 
     filter->buf_out = filter->buf_in = 0;
     filter->lbuf = 0;
@@ -100,6 +101,8 @@ filter_finished_cleanup (lua_State *L, Filter *filter) {
 
     luaL_unref(L, LUA_REGISTRYINDEX, filter->output_func_ref);
     filter->output_func_ref = LUA_NOREF;
+    luaL_unref(L, LUA_REGISTRYINDEX, filter->l_fh_ref);
+    filter->l_fh_ref = LUA_NOREF;
 }
 
 static void
@@ -183,6 +186,41 @@ output_c_fh (Filter *filter, const unsigned char *out_end,
     assert(out_end > filter->buf_out);
     assert(out_end >= filter->buf_out_end);
     fwrite(filter->buf_out, 1, out_end - filter->buf_out, filter->c_fh);
+    return filter->buf_out_end = filter->buf_out;
+}
+
+static unsigned char *
+output_lua_fh (Filter *filter, const unsigned char *out_end,
+               unsigned char **out_max)
+{
+    lua_State *L = filter->L;
+    (void) out_max;     /* unused - it never changes */
+    assert(out_end > filter->buf_out);
+    assert(out_end >= filter->buf_out_end);
+
+    lua_rawgeti(L, LUA_REGISTRYINDEX, filter->l_fh_ref);
+    lua_getfield(L, -1, "write");
+    if (!lua_isfunction(L, -1))
+        luaL_error(L, "'write' method not available on output file handle");
+    lua_pushvalue(L, -2);       /* file handle as first arg */
+    lua_pushlstring(L, (const char *) filter->buf_out,
+                    out_end - filter->buf_out);
+    lua_call(L, 2, 2);
+
+    if (lua_isnil(L, -2)) {     /* write error, returned nil, errmsg */
+        lua_pushstring(L, "error writing to output file: ");
+        if (lua_isstring(L, -2))
+            lua_pushvalue(L, -2);
+        else
+            lua_pushstring(L, "(file handle's write method didn't provide an"
+                           " error message");
+        lua_concat(L, 2);
+        lua_error(L);
+    }
+    else {                      /* write ok, returned true, nil */
+        lua_pop(L, 3);          /* pop return vals and file handle */
+    }
+
     return filter->buf_out_end = filter->buf_out;
 }
 
@@ -339,6 +377,20 @@ filter_new (lua_State *L) {
             lua_pushvalue(L, 3);
             filter->output_func_ref = luaL_ref(L, LUA_REGISTRYINDEX);
             filter->do_output = output_luafunc;
+        }
+        else if (arg_type == LUA_TTABLE || arg_type == LUA_TUSERDATA) {
+            lua_getfield(L, 3, "write");
+            if (lua_isnil(L, -1))
+                return luaL_argerror(L, 2, "not a file handle object, has no"
+                                     " 'write' method");
+            else if (!lua_isfunction(L, -1))
+                return luaL_argerror(L, 2, "not a file handle object, 'write'"
+                                     " method is not a function");
+            lua_pop(L, 1);
+
+            lua_pushvalue(L, 3);
+            filter->l_fh_ref = luaL_ref(L, LUA_REGISTRYINDEX);
+            filter->do_output = output_lua_fh;
         }
         else
             return luaL_argerror(L, 2, "invalid type for output destination");
