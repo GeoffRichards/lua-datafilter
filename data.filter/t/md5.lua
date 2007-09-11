@@ -4,17 +4,9 @@ local testcase = TestCase("Algorithm md5")
 
 local misc_mapping, progressive_md5_expected
 
-local function int (x) return x - x % 1 end
-
-local HEX = { "0","1","2","3","4","5","6","7","8","9",
-              "a","b","c","d","e","f" }
-local function bytes_to_hex (s)
-    local hex = ""
-    for i = 1, 16 do
-        local byte = string.byte(s, i)
-        hex = hex .. HEX[int(byte / 16) + 1] .. HEX[int(byte % 16) + 1]
-    end
-    return hex
+function testcase:test_trivial_obj ()
+    local obj = Filter:new("md5")
+    is("d41d8cd98f00b204e9800998ecf8427e", bytes_to_hex(obj:result()))
 end
 
 function testcase:test_misc_md5 ()

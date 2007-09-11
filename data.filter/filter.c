@@ -388,9 +388,11 @@ filter_addfile (lua_State *L) {
         max_bytes = filter->buf_in_size - (filter->buf_in_end - filter->buf_in);
         errno = 0;
         bytes_read = fread(filter->buf_in_end, 1, max_bytes, f);
-        if (errno)
+        if (errno) {
+            fclose(f);
             return luaL_error(L, "error reading from file '%s': %s", filename,
                               strerror(errno));
+        }
 
         if (bytes_read > 0) {
             filter->buf_in_end += bytes_read;

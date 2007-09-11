@@ -36,6 +36,7 @@ function testcase:test_output_filename ()
     obj:add("and some more")
     obj:finish()
     is("Zm9vYmFyYW5kIHNvbWUgbW9yZQ==", read_file(tmpname))
+    assert_error("output sent elsewhere", function () obj:result() end)
     assert(os.remove(tmpname))
 end
 
@@ -58,6 +59,7 @@ function testcase:test_output_function ()
     obj:add("and some more")
     obj:finish()
     is("Zm9vYmFyYW5kIHNvbWUgbW9yZQ==", got)
+    assert_error("output sent elsewhere", function () obj:result() end)
 end
 
 function testcase:test_output_function_big ()
@@ -75,6 +77,37 @@ function testcase:test_output_function_error ()
     local obj = Filter:new("base64_encode", func)
     obj:add("foo")
     assert_error("callback throws exception", function () obj:finish() end)
+end
+
+function testcase:test_bad_usage ()
+    assert_error("too many args",
+                 function () Filter:new("md5", nil, "foo") end)
+    assert_error("invalid algo name", function () Filter:new("md5\0foo") end)
+    assert_error("unknown algo name", function () Filter:new("erinaceous") end)
+    assert_error("invalid output file name",
+                 function () Filter:new("md5", "tmpname\0foo") end)
+    assert_error("error opening output file",
+                 function () Filter:new("md5", "t") end)
+
+    local obj = Filter:new("md5")
+    obj:addfile("COPYRIGHT")
+    assert_error("invalid input file name",
+                 function () obj:addfile("COPYRIGHT\0foo") end)
+    assert_error("error opening/reading input file",
+                 function () obj:addfile("t") end)
+
+    obj = Filter:new("md5")
+    obj:add("foo")
+    is("acbd18db4cc2f85cedef654fccc4a4d8", bytes_to_hex(obj:result()))
+    assert_error("adding more after finished", function () obj:add("foo") end)
+    assert_error("adding more from file after finished",
+                 function () obj:addfile("COPYRIGHT") end)
+    is("acbd18db4cc2f85cedef654fccc4a4d8", bytes_to_hex(obj:result()))
+
+    obj = Filter:new("md5", function () end)
+    obj:add("foo")
+    obj:finish()
+    assert_error("calling finish twice", function () obj:finish() end)
 end
 
 lunit.run()
