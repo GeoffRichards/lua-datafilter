@@ -362,26 +362,15 @@ filter_add (lua_State *L) {
     return 0;
 }
 
-static int
-filter_addfile (lua_State *L) {
-    Filter *filter = luaL_checkudata(L, 1, FILTER_MT_NAME);
-    size_t filename_len, max_bytes, bytes_left_over;
-    const char *filename = luaL_checklstring(L, 2, &filename_len);
+static void
+filter_addfile_filename (lua_State *L, Filter *filter, const char *filename) {
+    size_t max_bytes, bytes_read, bytes_left_over;
     unsigned char *left_over;
     FILE *f;
-    size_t bytes_read;
-
-    luaL_argcheck(L, !contains_null_byte(filename, filename_len), 2,
-                  "invalid file name");
-
-    if (filter->finished)
-        return luaL_error(L, "output has been finalized, it's too late to"
-                          " add more input");
 
     f = fopen(filename, "rb");
     if (!f)
-        return luaL_error(L, "error opening file '%s': %s", filename,
-                          strerror(errno));
+        luaL_error(L, "error opening file '%s': %s", filename, strerror(errno));
 
     while (!feof(f)) {
         /* Top up the input buffer with as much as we can fit in. */
@@ -390,10 +379,11 @@ filter_addfile (lua_State *L) {
         bytes_read = fread(filter->buf_in_end, 1, max_bytes, f);
         if (errno) {
             fclose(f);
-            return luaL_error(L, "error reading from file '%s': %s", filename,
-                              strerror(errno));
+            luaL_error(L, "error reading from file '%s': %s", filename,
+                       strerror(errno));
         }
 
+        /* Process as much as possible of what we've got. */
         if (bytes_read > 0) {
             filter->buf_in_end += bytes_read;
             left_over = (unsigned char *) filter->func(
@@ -409,6 +399,99 @@ filter_addfile (lua_State *L) {
     }
 
     fclose(f);
+}
+
+static void
+filter_addfile_function (lua_State *L, Filter *filter,
+                         int handlepos, int funcpos)
+{
+    size_t bytes_read, bytes_left_over;
+    const char *data;
+    unsigned char *left_over;
+
+    while (1) {
+        /* Top up the input buffer with as much as we can fit in. */
+        lua_pushvalue(L, funcpos);
+        lua_pushvalue(L, handlepos);
+        lua_pushinteger(L, filter->buf_in_size -
+                                (filter->buf_in_end - filter->buf_in));
+        lua_call(L, 2, 2);
+
+        if (lua_isnil(L, -2)) {
+            if (lua_isnil(L, -1)) {     /* EOF */
+                lua_pop(L, 2);
+                return;
+            }
+            else {                      /* read error */
+                lua_pushstring(L, "error reading from file: ");
+                lua_pushvalue(L, -2);   /* error message from :read() */
+                lua_concat(L, 2);
+                lua_error(L);
+            }
+        }
+        else if (!lua_isstring(L, -2)) {
+            luaL_error(L, "'read' method return unexpected value (should"
+                       " always be a strnig or nil)");
+        }
+
+        data = lua_tolstring(L, -2, &bytes_read);
+
+        /* Process as much as possible of what we've got. */
+        /* TODO - refactor with same stuff above */
+        if (bytes_read > 0) {
+            memcpy(filter->buf_in_end, data, bytes_read);
+            filter->buf_in_end += bytes_read;
+            left_over = (unsigned char *) filter->func(
+                filter, filter->buf_in, filter->buf_in_end,
+                filter->buf_out_end, filter->buf_out + filter->buf_out_size, 0);
+            if (left_over != filter->buf_in) {
+                bytes_left_over = filter->buf_in_end - left_over;
+                if (bytes_left_over)
+                    memmove(filter->buf_in, left_over, bytes_left_over);
+                filter->buf_in_end = filter->buf_in + bytes_left_over;
+            }
+        }
+
+        lua_pop(L, 2);
+    }
+}
+
+static int
+filter_addfile (lua_State *L) {
+    Filter *filter = luaL_checkudata(L, 1, FILTER_MT_NAME);
+    size_t filename_len;
+    const char *filename;
+    int num_args = lua_gettop(L);
+    int arg_type;
+
+    if (num_args != 2)
+        return luaL_error(L, "wrong number of arguments to :addfile()");
+
+    if (filter->finished)
+        return luaL_error(L, "output has been finalized, it's too late to"
+                          " add more input");
+
+    arg_type = lua_type(L, 2);
+    if (arg_type == LUA_TSTRING || arg_type == LUA_TNUMBER) {
+        filename = luaL_checklstring(L, 2, &filename_len);
+        luaL_argcheck(L, !contains_null_byte(filename, filename_len), 2,
+                      "invalid file name");
+        filter_addfile_filename(L, filter, filename);
+    }
+    else if (arg_type == LUA_TTABLE || arg_type == LUA_TUSERDATA) {
+        lua_getfield(L, 2, "read");
+        if (lua_isnil(L, -1))
+            return luaL_argerror(L, 2, "not a file handle object, has no"
+                                 " 'read' method");
+        else if (!lua_isfunction(L, -1))
+            return luaL_argerror(L, 2, "not a file handle object, 'read'"
+                                 " method is not a function");
+        filter_addfile_function(L, filter, 2, 3);
+    }
+    else
+        return luaL_argerror(L, 2, "bad type of file input, should be a"
+                             " filename or file handle object");
+
     return 0;
 }
 
