@@ -517,8 +517,10 @@ filter_result (lua_State *L) {
         return luaL_error(L, "output sent elsewhere, not available as a"
                           " string");
 
-    do_filtering(filter, 1);
-    filter_finished_cleanup(L, filter);
+    if (!filter->finished) {
+        do_filtering(filter, 1);
+        filter_finished_cleanup(L, filter);
+    }
 
     lua_pushlstring(L, (const char *) filter->buf_out,
                    filter->buf_out_end - filter->buf_out);

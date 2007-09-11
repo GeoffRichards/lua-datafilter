@@ -16,7 +16,7 @@ local HEX = { "0","1","2","3","4","5","6","7","8","9",
               "a","b","c","d","e","f" }
 function bytes_to_hex (s)
     local hex = ""
-    for i = 1, 16 do
+    for i = 1, s:len() do
         local byte = string.byte(s, i)
         hex = hex .. HEX[int(byte / 16) + 1] .. HEX[int(byte % 16) + 1]
     end
