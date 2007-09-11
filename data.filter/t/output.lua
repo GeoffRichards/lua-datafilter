@@ -89,22 +89,7 @@ function testcase:test_bad_usage ()
     assert_error("error opening output file",
                  function () Filter:new("md5", "t") end)
 
-    local obj = Filter:new("md5")
-    obj:addfile("COPYRIGHT")
-    assert_error("invalid input file name",
-                 function () obj:addfile("COPYRIGHT\0foo") end)
-    assert_error("error opening/reading input file",
-                 function () obj:addfile("t") end)
-
-    obj = Filter:new("md5")
-    obj:add("foo")
-    is("acbd18db4cc2f85cedef654fccc4a4d8", bytes_to_hex(obj:result()))
-    assert_error("adding more after finished", function () obj:add("foo") end)
-    assert_error("adding more from file after finished",
-                 function () obj:addfile("COPYRIGHT") end)
-    is("acbd18db4cc2f85cedef654fccc4a4d8", bytes_to_hex(obj:result()))
-
-    obj = Filter:new("md5", function () end)
+    local obj = Filter:new("md5", function () end)
     obj:add("foo")
     obj:finish()
     assert_error("calling finish twice", function () obj:finish() end)

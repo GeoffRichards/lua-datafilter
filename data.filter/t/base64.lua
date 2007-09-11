@@ -5,6 +5,13 @@ local testcase = TestCase("Algorithms base64_decode and base64_encode")
 local misc_mapping
 local single_byte_mapping
 
+function testcase:test_trivial_obj ()
+    local obj = Filter:new("base64_encode")
+    is("", obj:result())
+    obj = Filter:new("base64_decode")
+    is("", obj:result())
+end
+
 function testcase:test_encode ()
     for input, expected in pairs(misc_mapping) do
         is(expected, Filter.base64_encode(input),
