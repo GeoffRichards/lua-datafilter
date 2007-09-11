@@ -84,6 +84,10 @@ liblua-data.filter.la: filter.lo
 	@echo 'LD>' $@
 	@$(LIBTOOL) --mode=link $(CC) $(LDFLAGS) -o $@ $< -rpath $(LIBDIR)
 
+filter.lo: algorithms.c
+algorithms.c: algorithms.txt algorithms.pl
+	./algorithms.pl $< $@
+
 clean:
 	rm -f *.o *.lo *.d core
 	source .libs/liblua-data.filter.lai && \

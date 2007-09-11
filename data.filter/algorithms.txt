@@ -1,0 +1,4 @@
+# name		instance-struct		has destructor?
+base64_encode	-			0
+base64_decode	Base64Decode		0
+md5		MD5			0

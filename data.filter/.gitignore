@@ -2,5 +2,6 @@
 *.lo
 *.o
 .libs
+algorithms.c
 core
 liblua-data.filter.la

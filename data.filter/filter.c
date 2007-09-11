@@ -273,32 +273,7 @@ algo_wrapper (lua_State *L, const AlgorithmDefinition *def) {
 
 #include "algo/base64.c"
 #include "algo/md5.c"
-
-#define ALGO_WRAPPER_DECL(name, num) static int algowrap_##name (lua_State *L);
-ALGO_WRAPPER_DECL(base64_encode, 0)
-ALGO_WRAPPER_DECL(base64_decode, 1)
-ALGO_WRAPPER_DECL(md5, 2)
-#undef ALGO_WRAPPER_DECL
-
-#define ALGODEF(name) #name, algo_##name, algowrap_##name
-static const AlgorithmDefinition
-filter_algorithms[] = {
-    { ALGODEF(base64_encode), 0, 0, 0 },
-    { ALGODEF(base64_decode), sizeof(Base64DecodeState),
-      algo_base64_decode_init, 0 },
-    { ALGODEF(md5), sizeof(MD5State), algo_md5_init, 0 },
-};
-#undef ALGODEF
-#define NUM_ALGO_DEFS (sizeof(filter_algorithms) / sizeof(AlgorithmDefinition))
-
-#define ALGO_WRAPPER_DEF(name, num) \
-static int algowrap_##name (lua_State *L) { \
-    return algo_wrapper(L, &filter_algorithms[num]); \
-}
-ALGO_WRAPPER_DEF(base64_encode, 0)
-ALGO_WRAPPER_DEF(base64_decode, 1)
-ALGO_WRAPPER_DEF(md5, 2)
-#undef ALGO_WRAPPER_DEF
+#include "algorithms.c"
 
 #ifdef EXTRA_C_TESTS
 static int
