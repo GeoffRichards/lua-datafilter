@@ -227,11 +227,8 @@ do_base64_decode_block (Filter *filter, Base64DecodeState *state,
 {
     unsigned char *n = state->n;
 
-    if (state->seen_end)
-        assert(0);  /* TODO excess stuff after padding */
-
-    if (n[2] == 64 && n[3] != 64)
-        assert(0);      /* TODO - stuff after padding */
+    if (state->seen_end || (n[2] == 64 && n[3] != 64))
+        ALGO_ERROR("padding characters should only occur at the end");
 
     if (*out_max - out < 3)
         out = filter->do_output(filter, out, out_max);
@@ -243,14 +240,14 @@ do_base64_decode_block (Filter *filter, Base64DecodeState *state,
     }
     else if (n[2] != 64) {  /* ends with '=', block of 2 bytes */
         if (n[2] & 3)
-            assert(0);      /* TODO - spare bits set */
+            ALGO_ERROR("spare bits set in last character of input data");
         state->seen_end = 1;
         *out++ = (n[0] << 2) | (n[1] >> 4);
         *out++ = (n[1] << 4) | (n[2] >> 2);
     }
     else {                  /* ends with '==', block of 1 byte */
         if (n[1] & 0xF)
-            assert(0);      /* TODO - spare bits set */
+            ALGO_ERROR("spare bits set in last character of input data");
         state->seen_end = 1;
         *out++ = (n[0] << 2) | (n[1] >> 4);
     }
@@ -282,11 +279,14 @@ algo_base64_decode (Filter *filter,
             continue;   /* skip whitespace */
         }
         else if (c == 64 && state->count < 2)
-            assert(0);  /* TODO - padding in wrong place */
+            ALGO_ERROR("padding characters should only occur at the end");
         n[state->count++] = c;
 
-        if (state->count == 4)
+        if (state->count == 4) {
             out = do_base64_decode_block(filter, state, out, &out_max);
+            if (!out)
+                return 0;
+        }
     }
 
     if (eof) {
@@ -298,6 +298,8 @@ algo_base64_decode (Filter *filter,
             while (state->count < 4)
                 n[state->count++] = 64;
             out = do_base64_decode_block(filter, state, out, &out_max);
+            if (!out)
+                return 0;
         }
     }
     

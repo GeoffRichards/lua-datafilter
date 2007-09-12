@@ -141,12 +141,18 @@ end
 
 function testcase:test_missing_padding_error ()
     assert_error("spare char", function () Filter.base64_decode("e") end)
+
     assert_error("missing '==' in first block",
                  function () Filter.base64_decode("eA") end)
+    assert_error("input has '=' instead of '==' in first block",
+                 function () Filter.base64_decode("eA=") end)
     assert_error("missing '=' in first block",
                  function () Filter.base64_decode("eHk") end)
+
     assert_error("missing '==' after first block",
                  function () Filter.base64_decode("eHl6eg") end)
+    assert_error("input has '=' instead of '==' in second block",
+                 function () Filter.base64_decode("eHl6eg=") end)
     assert_error("missing '=' after first block",
                  function () Filter.base64_decode("eHl6enk") end)
 end
@@ -160,12 +166,53 @@ function testcase:test_missing_padding_ok ()
 
     is("x", Filter.base64_decode("eA", options),
        "missing '==' in first block")
+    is("x", Filter.base64_decode("eA=", options),
+       "input has '=' instead of '==' in first block")
     is("xy", Filter.base64_decode("eHk", options),
        "missing '=' in first block")
+
     is("xyzz", Filter.base64_decode("eHl6eg", options),
        "missing '==' after first block")
+    is("xyzz", Filter.base64_decode("eHl6eg=", options),
+       "input has '=' instead of '==' in second block")
     is("xyzzy", Filter.base64_decode("eHl6enk", options),
        "missing '=' after first block")
+end
+
+function testcase:test_padding_in_wrong_place ()
+    assert_error("padding char first in block, end of input",
+                 function () Filter.base64_decode("=") end)
+    assert_error("padding char second in block, end of input",
+                 function () Filter.base64_decode("e=") end)
+
+    assert_error("padding char first in block, input remaining",
+                 function () Filter.base64_decode("=eHl6") end)
+    assert_error("padding char second in block, input remaining",
+                 function () Filter.base64_decode("e=eHl6") end)
+
+    assert_error("one padding char ok, but more input afterwards",
+                 function () Filter.base64_decode("eHk=eHl6") end)
+    assert_error("two padding chars ok, but more input afterwards",
+                 function () Filter.base64_decode("eA==eHl6") end)
+
+    assert_error("padding char followed by alphabet char instead of padding",
+                 function () Filter.base64_decode("eA=X") end)
+end
+
+local function test_spare_bits (input)
+    assert_error("spare bits set in " .. input,
+                 function () Filter.base64_decode(input) end)
+end
+
+function testcase:test_spare_bits_set ()
+    test_spare_bits("eHl=")
+    test_spare_bits("eHm=")
+    test_spare_bits("eHn=")
+
+    local last = {"B","C","D","E","F","G","H","I","J","K","L","M","N","O","P"}
+    for _, letter in ipairs(last) do
+        test_spare_bits("e" .. letter .. "==")
+    end
 end
 
 misc_mapping = {
