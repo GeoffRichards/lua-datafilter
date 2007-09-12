@@ -45,6 +45,8 @@ typedef struct Base64EncodeState_ {
 
 typedef struct Base64DecodeState_ {
     int seen_end;
+    unsigned char n[4];
+    unsigned int count;
 } Base64DecodeState;
 
 /*static size_t
@@ -201,6 +203,45 @@ algo_base64_decode_init (Filter *filter, int options_pos) {
     Base64DecodeState *state = ALGO_STATE(filter);
     (void) options_pos;     /* unused */
     state->seen_end = 0;
+    state->count = 0;
+}
+
+static unsigned char *
+do_base64_decode_block (Filter *filter, Base64DecodeState *state,
+                        unsigned char *out, unsigned char **out_max)
+{
+    unsigned char *n = state->n;
+
+    if (state->seen_end)
+        assert(0);  /* TODO excess stuff after padding */
+
+    if (n[2] == 64 && n[3] != 64)
+        assert(0);      /* TODO - stuff after padding */
+
+    if (*out_max - out < 3)
+        out = filter->do_output(filter, out, out_max);
+
+    if (n[3] != 64) {       /* no padding, block of 3 bytes */
+        *out++ = (n[0] << 2) | (n[1] >> 4);
+        *out++ = (n[1] << 4) | (n[2] >> 2);
+        *out++ = (n[2] << 6) | n[3];
+    }
+    else if (n[2] != 64) {  /* ends with '=', block of 2 bytes */
+        if (n[2] & 3)
+            assert(0);      /* TODO - spare bits set */
+        state->seen_end = 1;
+        *out++ = (n[0] << 2) | (n[1] >> 4);
+        *out++ = (n[1] << 4) | (n[2] >> 2);
+    }
+    else {                  /* ends with '==', block of 1 byte */
+        if (n[1] & 0xF)
+            assert(0);      /* TODO - spare bits set */
+        state->seen_end = 1;
+        *out++ = (n[0] << 2) | (n[1] >> 4);
+    }
+
+    state->count = 0;
+    return out;
 }
 
 static const unsigned char *
@@ -208,63 +249,25 @@ algo_base64_decode (Filter *filter,
                     const unsigned char *in, const unsigned char *in_end,
                     unsigned char *out, unsigned char *out_max, int eof)
 {
-    unsigned int i;
     Base64DecodeState *state = ALGO_STATE(filter);
-    unsigned char n[4];
+    unsigned char *n = state->n;
+    unsigned char c;
 
-    if (state->seen_end && (!eof || in != in_end)) {
-        assert(0);  /* TODO excess stuff after padding */
+    while (in != in_end) {
+        c = base64_char_value[*in++];
+        if (c > 64)
+            assert(0);  /* TODO - not in base64 alphabet */
+        else if (c == 64 && state->count < 2)
+            assert(0);  /* TODO - padding in wrong place */
+        n[state->count++] = c;
+
+        if (state->count == 4)
+            out = do_base64_decode_block(filter, state, out, &out_max);
     }
 
-    while (in_end - in >= 4) {
-        if (out_max - out < 3)
-            out = filter->do_output(filter, out, &out_max);
-
-        for (i = 0; i < 4; ++i) {
-            n[i] = base64_char_value[*in++];
-        }
-
-        if (n[0] >= 64 || n[1] >= 64) {
-            assert(0);  /* TODO - exception */
-        }
-        else if (n[2] >= 64 || n[3] >= 64) {
-            if (n[3] == 64) {
-                if (n[2] < 64) {            /* end with '=' */
-                    if (in != in_end)
-                        assert(0);      /* TODO - excess data after padding */
-                    state->seen_end = 1;
-                    *out++ = (n[0] << 2) | (n[1] >> 4);
-                    *out++ = (n[1] << 4) | (n[2] >> 2);
-                    if (n[2] & 3) {
-                        assert(0);      /* TODO - spare bits set */
-                    }
-                }
-                else if (n[2] == 64) {      /* end with '==' */
-                    if (in != in_end)
-                        assert(0);      /* TODO - excess data after padding */
-                    state->seen_end = 1;
-                    *out++ = (n[0] << 2) | (n[1] >> 4);
-                    if (n[1] & 0xF) {
-                        assert(0);      /* TODO - spare bits set */
-                    }
-                }
-                else {
-                    assert(0);  /* TODO - esception */
-                }
-            }
-            else {
-                assert(0);  /* TODO - esception */
-            }
-        }
-        else {
-            *out++ = (n[0] << 2) | (n[1] >> 4);
-            *out++ = (n[1] << 4) | (n[2] >> 2);
-            *out++ = (n[2] << 6) | n[3];
-        }
-    }
-
-    if (eof && in != in_end) {
-        assert(0);  /* TODO - missing padding '=' or two */
+    if (eof) {
+        if (state->count > 0)
+            assert(0);      /* TODO - unfinished block with no padding at end */
     }
     
     filter->buf_out_end = out;
