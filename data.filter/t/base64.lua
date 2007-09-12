@@ -48,6 +48,59 @@ function testcase:test_oo_encode ()
     is("QWxhZGRpbjpvcGVuIHNlc2FtZQ==", obj:result())
 end
 
+function testcase:test_no_padding ()
+    for input, expected in pairs(misc_mapping) do
+        expected = expected:gsub("=+$", "", 1)
+        is(expected, Filter.base64_encode(input, { no_padding = true }),
+           "encode value without padding " .. string.format("%q", input))
+    end
+end
+
+local function test_with_line_breaking (line_ending)
+    for max_line_len = 1, 20 do
+        for input, expected in pairs(misc_mapping) do
+            local dots = ("."):rep(max_line_len)
+            expected = expected:gsub("(" .. dots .. ")", "%1" .. line_ending)
+            if expected ~= "" and not expected:find(line_ending .. "$") then
+                expected = expected .. line_ending
+            end
+            local got = Filter.base64_encode(input, {
+                line_ending = line_ending,
+                max_line_length = max_line_len,
+            })
+            local desc = "encode value with " .. max_line_len ..
+                         " bytes per line, line ending " ..
+                         string.format("%q", line_ending) .. ", input " ..
+                         string.format("%q", input)
+            is(expected, got, desc)
+        end
+    end
+end
+
+function testcase:test_eol ()
+    test_with_line_breaking("\13\10")
+    test_with_line_breaking("\13")
+    test_with_line_breaking("\10")
+    test_with_line_breaking("foobar baz")
+end
+
+function testcase:test_eol_defaults ()
+    local input = ("foobar"):rep(10)
+    local result = Filter.base64_encode(input)
+    is(("Zm9vYmFy"):rep(10), result, "no line breaking")
+    local result = Filter.base64_encode(input, { line_ending = "\10" })
+    is(("Zm9vYmFy"):rep(9) .. "Zm9v\10YmFy\10", result, "default line len")
+    local result = Filter.base64_encode(input, { max_line_length = 76 })
+    is(("Zm9vYmFy"):rep(9) .. "Zm9v\13\10YmFy\13\10", result,
+       "default line ending, explicit default line len")
+    local result = Filter.base64_encode(input, { max_line_length = 40 })
+    is(("Zm9vYmFy"):rep(5) .. "\13\10" .. ("Zm9vYmFy"):rep(5) .. "\13\10",
+       result, "default line ending, non-default line len")
+
+    is("ZnJvYg==", Filter.base64_encode("frob", { no_padding = false }),
+       "explicit default no_padding")
+end
+
 misc_mapping = {
     -- Test data from RFC 4648, section 10
     [""] = "",

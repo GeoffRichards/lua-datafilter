@@ -155,8 +155,9 @@ typedef struct MD5State_ {
 } MD5State;
 
 static void
-algo_md5_init (Filter *filter) {
+algo_md5_init (Filter *filter, int options_pos) {
     MD5State *decoder_state = ALGO_STATE(filter);
+    (void) options_pos;     /* unused */
     decoder_state->d[0] = 0x67452301;
     decoder_state->d[1] = 0xEFCDAB89;
     decoder_state->d[2] = 0x98BADCFE;

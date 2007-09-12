@@ -40,7 +40,7 @@ typedef struct Filter_ {
 
 typedef int (*AlgorithmWrapperFunction) (lua_State *L);
 /*typedef size_t (*AlgorithmSizeFunction) (size_t input_size);*/
-typedef void (*AlgorithmInitFunction) (Filter *filter);
+typedef void (*AlgorithmInitFunction) (Filter *filter, int options_pos);
 
 typedef struct AlgorithmDefinition_ {
     const char *name;
@@ -52,8 +52,17 @@ typedef struct AlgorithmDefinition_ {
     AlgorithmDestroyFunction destroy_func;
 } AlgorithmDefinition;
 
+static const unsigned char *
+my_strduplen (Filter *filter, const unsigned char *s, size_t len) {
+    unsigned char *newstr = filter->alloc(filter->alloc_ud, 0, 0, len);
+    memcpy(newstr, s, len);
+    return newstr;
+}
+
 static void
-init_filter (Filter *filter, lua_State *L, const AlgorithmDefinition *def) {
+init_filter (Filter *filter, lua_State *L, const AlgorithmDefinition *def,
+             int options_pos)
+{
     lua_Alloc alloc;
     void *alloc_ud;
 
@@ -77,7 +86,7 @@ init_filter (Filter *filter, lua_State *L, const AlgorithmDefinition *def) {
     filter->buf_out_size = BUFSIZ;
 
     if (def->init_func)
-        def->init_func(filter);
+        def->init_func(filter, options_pos);
     filter->destroy_func = def->destroy_func;
     filter->func = def->func;
 }
@@ -245,12 +254,22 @@ algo_wrapper (lua_State *L, const AlgorithmDefinition *def) {
     Filter *filter;
     lua_Alloc alloc;
     void *alloc_ud;
+    int num_args = lua_gettop(L);
+    int options_pos = 0;
+
+    if (num_args > 2)
+        return luaL_error(L, "too many arguments to algorithm function");
+    if (num_args >= 2 && !lua_isnil(L, 2)) {
+        if (!lua_istable(L, 2))
+            return luaL_argerror(L, 2, "options must be either nil or a table");
+        options_pos = 2;
+    }
 
     alloc = lua_getallocf(L, &alloc_ud);
 
     filter = alloc(alloc_ud, 0, 0, sizeof(Filter) + def->state_size);
     assert(filter);
-    init_filter(filter, L, def);
+    init_filter(filter, L, def, options_pos);
 
     filter->buf_in = s;
     filter->buf_in_end = s + len;
@@ -307,11 +326,12 @@ filter_new (lua_State *L) {
     Filter *filter;
     int num_args = lua_gettop(L);
     int arg_type;
+    int options_pos = 0;
 
     luaL_argcheck(L, !contains_null_byte(algo_name, algo_name_len), 2,
                   "invalid algorithm name");
 
-    if (num_args > 3)
+    if (num_args > 4)
         return luaL_error(L, "too many arguments to data.filter:new()");
 
     /* Find the definition of the named algorithm. */
@@ -323,10 +343,17 @@ filter_new (lua_State *L) {
     if (i == NUM_ALGO_DEFS)
         return luaL_argerror(L, 2, "unrecognized algorithm name");
 
+    /* Check the options table. */
+    if (num_args >= 4 && !lua_isnil(L, 4)) {
+        if (!lua_istable(L, 4))
+            return luaL_argerror(L, 4, "options must be either nil or a table");
+        options_pos = 4;
+    }
+
     /* Create the filter object.  This is on the stack, so if anything goes
      * wrong after this Lua will be able to clean it up. */
     filter = lua_newuserdata(L, sizeof(Filter) + def->state_size);
-    init_filter(filter, L, def);
+    init_filter(filter, L, def, options_pos);
     luaL_getmetatable(L, FILTER_MT_NAME);
     lua_setmetatable(L, -2);
 
