@@ -67,7 +67,7 @@ end
 
 function testcase:test_whitespace_not_allowed ()
     local encoded_cases = { "eHl6", "eHk=", "eA==", "" }
-    local options = { disallow_whitespace = true }
+    local options = { allow_whitespace = false }
     for _, encoded in ipairs(encoded_cases) do
         for space_pos = 0, encoded:len() do
             local input = encoded:sub(1, space_pos) .. " " ..
@@ -89,7 +89,7 @@ end
 function testcase:test_no_padding ()
     for input, expected in pairs(misc_mapping) do
         expected = expected:gsub("=+$", "", 1)
-        is(expected, Filter.base64_encode(input, { no_padding = true }),
+        is(expected, Filter.base64_encode(input, { include_padding = false }),
            "encode value without padding " .. string.format("%q", input))
     end
 end
@@ -135,8 +135,8 @@ function testcase:test_eol_defaults ()
     is(("Zm9vYmFy"):rep(5) .. "\13\10" .. ("Zm9vYmFy"):rep(5) .. "\13\10",
        result, "default line ending, non-default line len")
 
-    is("ZnJvYg==", Filter.base64_encode("frob", { no_padding = false }),
-       "explicit default no_padding")
+    is("ZnJvYg==", Filter.base64_encode("frob", { include_padding = true }),
+       "explicit default include_padding")
 end
 
 function testcase:test_missing_padding_error ()

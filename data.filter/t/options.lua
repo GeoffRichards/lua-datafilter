@@ -54,7 +54,7 @@ end
 function testcase:test_exception_in_algo_oo ()
     -- I need to make sure that this exception doesn't cause a leak.
     local obj = Filter:new("base64_decode", nil,
-                           { disallow_whitespace = true })
+                           { allow_whitespace = false })
     assert_error("whitespace not allowed, options passed to :new()",
                  function () obj:add("eH l6"); obj:result() end)
 end

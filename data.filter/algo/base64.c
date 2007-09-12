@@ -40,14 +40,14 @@ base64_char_value[] = {
 typedef struct Base64EncodeState_ {
     const unsigned char *line_ending;
     size_t line_ending_len, max_line_length, cur_line_length;
-    int no_padding;
+    int include_padding;
 } Base64EncodeState;
 
 typedef struct Base64DecodeState_ {
     int seen_end;
     unsigned char n[4];
     unsigned int count;
-    int disallow_whitespace, allow_missing_padding;
+    int allow_whitespace, allow_missing_padding;
 } Base64DecodeState;
 
 /*static size_t
@@ -68,11 +68,11 @@ algo_base64_encode_init (Filter *filter, int options_pos) {
     state->line_ending_len = 0;
     state->max_line_length = 0;
     state->cur_line_length = 0;
-    state->no_padding = 0;
+    state->include_padding = 1;
 
     if (options_pos) {
-        lua_getfield(L, options_pos, "no_padding");
-        state->no_padding = lua_toboolean(L, -1);
+        lua_getfield(L, options_pos, "include_padding");
+        state->include_padding = lua_isnil(L, -1) || lua_toboolean(L, -1);
         lua_pop(L, 1);
 
         lua_getfield(L, options_pos, "line_ending");
@@ -158,7 +158,7 @@ algo_base64_encode (Filter *filter,
                 DO_LINE_ENDINGS(3)
                 *out++ = base64_char_code[(n & 3) << 4];
                 DO_LINE_ENDINGS(2)
-                if (!state->no_padding) {
+                if (state->include_padding) {
                     *out++ = BASE64_PADDING_CHAR;
                     DO_LINE_ENDINGS(1)
                     *out++ = BASE64_PADDING_CHAR;
@@ -174,7 +174,7 @@ algo_base64_encode (Filter *filter,
                 DO_LINE_ENDINGS(2)
                 *out++ = base64_char_code[(n & 0xF) << 2];
                 DO_LINE_ENDINGS(1)
-                if (!state->no_padding) {
+                if (state->include_padding) {
                     *out++ = BASE64_PADDING_CHAR;
                     DO_LINE_ENDINGS(0)
                 }
@@ -207,12 +207,12 @@ algo_base64_decode_init (Filter *filter, int options_pos) {
 
     state->seen_end = 0;
     state->count = 0;
-    state->disallow_whitespace = 0;
+    state->allow_whitespace = 1;
     state->allow_missing_padding = 0;
 
     if (options_pos) {
-        lua_getfield(L, options_pos, "disallow_whitespace");
-        state->disallow_whitespace = lua_toboolean(L, -1);
+        lua_getfield(L, options_pos, "allow_whitespace");
+        state->allow_whitespace = lua_isnil(L, -1) || lua_toboolean(L, -1);
         lua_pop(L, 1);
 
         lua_getfield(L, options_pos, "allow_missing_padding");
@@ -274,7 +274,7 @@ algo_base64_decode (Filter *filter,
         byte = *in++;
         c = base64_char_value[byte];
         if (c > 64) {
-            if (state->disallow_whitespace || !my_isspace(byte))
+            if (!state->allow_whitespace || !my_isspace(byte))
                 ALGO_ERROR("invalid character in input");
             continue;   /* skip whitespace */
         }
