@@ -4,3 +4,4 @@ base64_encode	Base64Encode		1
 hex_lower	-			0
 hex_upper	-			0
 md5		MD5			0
+sha1		SHA1			0
