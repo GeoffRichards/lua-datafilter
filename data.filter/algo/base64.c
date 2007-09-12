@@ -47,7 +47,7 @@ typedef struct Base64DecodeState_ {
     int seen_end;
     unsigned char n[4];
     unsigned int count;
-    int disallow_whitespace;
+    int disallow_whitespace, allow_missing_padding;
 } Base64DecodeState;
 
 /*static size_t
@@ -208,10 +208,15 @@ algo_base64_decode_init (Filter *filter, int options_pos) {
     state->seen_end = 0;
     state->count = 0;
     state->disallow_whitespace = 0;
+    state->allow_missing_padding = 0;
 
     if (options_pos) {
         lua_getfield(L, options_pos, "disallow_whitespace");
         state->disallow_whitespace = lua_toboolean(L, -1);
+        lua_pop(L, 1);
+
+        lua_getfield(L, options_pos, "allow_missing_padding");
+        state->allow_missing_padding = lua_toboolean(L, -1);
         lua_pop(L, 1);
     }
 }
@@ -285,8 +290,15 @@ algo_base64_decode (Filter *filter,
     }
 
     if (eof) {
-        if (state->count > 0)
-            assert(0);      /* TODO - unfinished block with no padding at end */
+        if (state->count == 1)
+            ALGO_ERROR("spare character at end of input");
+        else if (state->count >= 2) {
+            if (!state->allow_missing_padding)
+                ALGO_ERROR("padding characters missing at end of input");
+            while (state->count < 4)
+                n[state->count++] = 64;
+            out = do_base64_decode_block(filter, state, out, &out_max);
+        }
     }
     
     filter->buf_out_end = out;

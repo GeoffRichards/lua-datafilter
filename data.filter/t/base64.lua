@@ -139,6 +139,35 @@ function testcase:test_eol_defaults ()
        "explicit default no_padding")
 end
 
+function testcase:test_missing_padding_error ()
+    assert_error("spare char", function () Filter.base64_decode("e") end)
+    assert_error("missing '==' in first block",
+                 function () Filter.base64_decode("eA") end)
+    assert_error("missing '=' in first block",
+                 function () Filter.base64_decode("eHk") end)
+    assert_error("missing '==' after first block",
+                 function () Filter.base64_decode("eHl6eg") end)
+    assert_error("missing '=' after first block",
+                 function () Filter.base64_decode("eHl6enk") end)
+end
+
+function testcase:test_missing_padding_ok ()
+    local options = { allow_missing_padding = true }
+
+    -- This is always wrong, even if you're lenient about missing padding.
+    assert_error("spare char",
+                 function () Filter.base64_decode("e", options) end)
+
+    is("x", Filter.base64_decode("eA", options),
+       "missing '==' in first block")
+    is("xy", Filter.base64_decode("eHk", options),
+       "missing '=' in first block")
+    is("xyzz", Filter.base64_decode("eHl6eg", options),
+       "missing '==' after first block")
+    is("xyzzy", Filter.base64_decode("eHl6enk", options),
+       "missing '=' after first block")
+end
+
 misc_mapping = {
     -- Test data from RFC 4648, section 10
     [""] = "",
