@@ -56,20 +56,20 @@ static const unsigned char default_line_ending[2] = { 13, 10 };
 
 static void
 algo_base64_encode_init (Filter *filter, int options_pos) {
-    Base64EncodeState *decoder_state = ALGO_STATE(filter);
+    Base64EncodeState *state = ALGO_STATE(filter);
     lua_State *L = filter->L;
     const char *s;
     lua_Integer n;
 
-    decoder_state->line_ending = 0;
-    decoder_state->line_ending_len = 0;
-    decoder_state->max_line_length = 0;
-    decoder_state->cur_line_length = 0;
-    decoder_state->no_padding = 0;
+    state->line_ending = 0;
+    state->line_ending_len = 0;
+    state->max_line_length = 0;
+    state->cur_line_length = 0;
+    state->no_padding = 0;
 
     if (options_pos) {
         lua_getfield(L, options_pos, "no_padding");
-        decoder_state->no_padding = lua_toboolean(L, -1);
+        state->no_padding = lua_toboolean(L, -1);
         lua_pop(L, 1);
 
         lua_getfield(L, options_pos, "line_ending");
@@ -77,10 +77,10 @@ algo_base64_encode_init (Filter *filter, int options_pos) {
             if (!lua_isstring(L, -1))
                 luaL_error(L, "bad value for 'line_ending' option,"
                            " should be a string");
-            s = lua_tolstring(L, -1, &decoder_state->line_ending_len);
-            decoder_state->line_ending = my_strduplen(
-                filter, (unsigned char *) s, decoder_state->line_ending_len);
-            decoder_state->max_line_length = 76;
+            s = lua_tolstring(L, -1, &state->line_ending_len);
+            state->line_ending = my_strduplen(
+                filter, (unsigned char *) s, state->line_ending_len);
+            state->max_line_length = 76;
         }
         lua_pop(L, 1);
 
@@ -93,10 +93,10 @@ algo_base64_encode_init (Filter *filter, int options_pos) {
             if (n <= 0)
                 luaL_error(L, "bad value for 'max_line_length' option,"
                            " must be greater than zero");
-            decoder_state->max_line_length = n;
-            if (!decoder_state->line_ending) {
-                decoder_state->line_ending = default_line_ending;
-                decoder_state->line_ending_len = 2;
+            state->max_line_length = n;
+            if (!state->line_ending) {
+                state->line_ending = default_line_ending;
+                state->line_ending_len = 2;
             }
         }
         lua_pop(L, 1);
@@ -105,23 +105,21 @@ algo_base64_encode_init (Filter *filter, int options_pos) {
 
 static void
 algo_base64_encode_destroy (Filter *filter) {
-    Base64EncodeState *decoder_state = ALGO_STATE(filter);
-    if (decoder_state->line_ending &&
-        decoder_state->line_ending != default_line_ending)
-        filter->alloc(filter->alloc_ud, (char *) decoder_state->line_ending,
-                      decoder_state->line_ending_len, 0);
+    Base64EncodeState *state = ALGO_STATE(filter);
+    if (state->line_ending && state->line_ending != default_line_ending)
+        filter->alloc(filter->alloc_ud, (char *) state->line_ending,
+                      state->line_ending_len, 0);
 }
 
 #define DO_LINE_ENDINGS(bytes_to_go) \
-    if (++decoder_state->cur_line_length == decoder_state->max_line_length \
-        && decoder_state->line_ending) \
+    if (++state->cur_line_length == state->max_line_length \
+        && state->line_ending) \
     { \
-        if ((size_t) (out_max - out) < decoder_state->line_ending_len + bytes_to_go) \
+        if ((size_t) (out_max - out) < state->line_ending_len + bytes_to_go) \
             out = filter->do_output(filter, out, &out_max); \
-        memcpy(out, decoder_state->line_ending, \
-               decoder_state->line_ending_len); \
-        out += decoder_state->line_ending_len; \
-        decoder_state->cur_line_length = 0; \
+        memcpy(out, state->line_ending, state->line_ending_len); \
+        out += state->line_ending_len; \
+        state->cur_line_length = 0; \
     }
 
 static const unsigned char *
@@ -129,7 +127,7 @@ algo_base64_encode (Filter *filter,
                     const unsigned char *in, const unsigned char *in_end,
                     unsigned char *out, unsigned char *out_max, int eof)
 {
-    Base64EncodeState *decoder_state = ALGO_STATE(filter);
+    Base64EncodeState *state = ALGO_STATE(filter);
     unsigned int n;
 
     while (in_end - in >= 3) {
@@ -157,7 +155,7 @@ algo_base64_encode (Filter *filter,
                 DO_LINE_ENDINGS(3)
                 *out++ = base64_char_code[(n & 3) << 4];
                 DO_LINE_ENDINGS(2)
-                if (!decoder_state->no_padding) {
+                if (!state->no_padding) {
                     *out++ = BASE64_PADDING_CHAR;
                     DO_LINE_ENDINGS(1)
                     *out++ = BASE64_PADDING_CHAR;
@@ -173,20 +171,19 @@ algo_base64_encode (Filter *filter,
                 DO_LINE_ENDINGS(2)
                 *out++ = base64_char_code[(n & 0xF) << 2];
                 DO_LINE_ENDINGS(1)
-                if (!decoder_state->no_padding) {
+                if (!state->no_padding) {
                     *out++ = BASE64_PADDING_CHAR;
                     DO_LINE_ENDINGS(0)
                 }
             }
         }
 
-        if (decoder_state->cur_line_length > 0 && decoder_state->line_ending) {
-            if ((size_t) (out_max - out) < decoder_state->line_ending_len)
+        if (state->cur_line_length > 0 && state->line_ending) {
+            if ((size_t) (out_max - out) < state->line_ending_len)
                 out = filter->do_output(filter, out, &out_max);
-            memcpy(out, decoder_state->line_ending,
-                   decoder_state->line_ending_len);
-            out += decoder_state->line_ending_len;
-            decoder_state->cur_line_length = 0;
+            memcpy(out, state->line_ending, state->line_ending_len);
+            out += state->line_ending_len;
+            state->cur_line_length = 0;
         }
     }
 
@@ -201,9 +198,9 @@ algo_base64_decode_outsz (size_t input_size) {
 
 static void
 algo_base64_decode_init (Filter *filter, int options_pos) {
-    Base64DecodeState *decoder_state = ALGO_STATE(filter);
+    Base64DecodeState *state = ALGO_STATE(filter);
     (void) options_pos;     /* unused */
-    decoder_state->seen_end = 0;
+    state->seen_end = 0;
 }
 
 static const unsigned char *
@@ -211,11 +208,11 @@ algo_base64_decode (Filter *filter,
                     const unsigned char *in, const unsigned char *in_end,
                     unsigned char *out, unsigned char *out_max, int eof)
 {
-    unsigned char n[4];
     unsigned int i;
-    Base64DecodeState *decoder_state = ALGO_STATE(filter);
+    Base64DecodeState *state = ALGO_STATE(filter);
+    unsigned char n[4];
 
-    if (decoder_state->seen_end && (!eof || in != in_end)) {
+    if (state->seen_end && (!eof || in != in_end)) {
         assert(0);  /* TODO excess stuff after padding */
     }
 
@@ -235,7 +232,7 @@ algo_base64_decode (Filter *filter,
                 if (n[2] < 64) {            /* end with '=' */
                     if (in != in_end)
                         assert(0);      /* TODO - excess data after padding */
-                    decoder_state->seen_end = 1;
+                    state->seen_end = 1;
                     *out++ = (n[0] << 2) | (n[1] >> 4);
                     *out++ = (n[1] << 4) | (n[2] >> 2);
                     if (n[2] & 3) {
@@ -245,7 +242,7 @@ algo_base64_decode (Filter *filter,
                 else if (n[2] == 64) {      /* end with '==' */
                     if (in != in_end)
                         assert(0);      /* TODO - excess data after padding */
-                    decoder_state->seen_end = 1;
+                    state->seen_end = 1;
                     *out++ = (n[0] << 2) | (n[1] >> 4);
                     if (n[1] & 0xF) {
                         assert(0);      /* TODO - spare bits set */
