@@ -4,9 +4,6 @@
 #include <errno.h>
 #include <assert.h>
 
-/* TODO - default off, control from makefile */
-#define EXTRA_C_TESTS
-
 #define FILTER_MT_NAME ("c3966aca-6037-11dc-9675-00e081225ce5-" VERSION)
 
 struct Filter_;
@@ -320,15 +317,6 @@ algo_wrapper (lua_State *L, const AlgorithmDefinition *def) {
 #include "algo/hex.c"
 #include "algorithms.c"
 
-#ifdef EXTRA_C_TESTS
-static int
-test_internal_stuff (lua_State *L) {
-    (void) L;   /* unused arg */
-    /*test_internal_base64();*/
-    return 0;
-}
-#endif
-
 static int
 contains_null_byte (const char *s, size_t len) {
     size_t i;
@@ -617,8 +605,8 @@ luaopen_data_filter (lua_State *L) {
     const AlgorithmDefinition *def;
 
     /* Reserve space for the simple algorithm functions (one per algo), and:
-     *  _MODULE_NAME, _VERSION, .util, .new() */
-    lua_createtable(L, 0, NUM_ALGO_DEFS + 4);
+     *  _MODULE_NAME, _VERSION, .new() */
+    lua_createtable(L, 0, NUM_ALGO_DEFS + 3);
 
     lua_pushlstring(L, "_MODULE_NAME", 12);
     lua_pushlstring(L, "data.filter", 11);
@@ -626,11 +614,6 @@ luaopen_data_filter (lua_State *L) {
     lua_pushlstring(L, "_VERSION", 8);
     lua_pushstring(L, VERSION);
     lua_rawset(L, -3);
-#ifdef EXTRA_C_TESTS
-    lua_pushstring(L, "_do_internal_tests");
-    lua_pushcfunction(L, test_internal_stuff);
-    lua_rawset(L, -3);
-#endif
 
     def = filter_algorithms;
     for (i = 0; i < NUM_ALGO_DEFS; ++i, ++def) {
@@ -638,8 +621,6 @@ luaopen_data_filter (lua_State *L) {
         lua_pushcfunction(L, def->wrapper_func);
         lua_rawset(L, -3);
     }
-
-    /* TODO - .util */
 
     lua_pushlstring(L, "new", 3);
     lua_pushcfunction(L, filter_new);

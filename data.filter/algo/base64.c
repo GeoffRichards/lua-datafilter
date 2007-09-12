@@ -50,11 +50,6 @@ typedef struct Base64DecodeState_ {
     int allow_whitespace, allow_invalid_characters, allow_missing_padding;
 } Base64DecodeState;
 
-/*static size_t
-algo_base64_encode_outsz (size_t input_size) {
-    return (input_size + 2) / 3 * 4;
-}*/
-
 static const unsigned char default_line_ending[2] = { 13, 10 };
 
 static void
@@ -194,11 +189,6 @@ algo_base64_encode (Filter *filter,
     return in;
 }
 
-/*static size_t
-algo_base64_decode_outsz (size_t input_size) {
-    return (input_size + 3) / 4 * 3;
-}*/
-
 static void
 algo_base64_decode_init (Filter *filter, int options_pos) {
     Base64DecodeState *state = ALGO_STATE(filter);
@@ -312,31 +302,5 @@ algo_base64_decode (Filter *filter,
     filter->buf_out_end = out;
     return in;
 }
-
-#if 0
-#ifdef EXTRA_C_TESTS
-void
-test_internal_base64 (void) {
-    /* None of this is going to work with 16 bit integers. */
-    assert(sizeof(unsigned int) >= 3);
-
-    assert(algo_base64_encode_outsz(0) == 0);
-    assert(algo_base64_encode_outsz(1) == 4);
-    assert(algo_base64_encode_outsz(2) == 4);
-    assert(algo_base64_encode_outsz(3) == 4);
-    assert(algo_base64_encode_outsz(4) == 8);
-    assert(algo_base64_encode_outsz(5) == 8);
-    assert(algo_base64_encode_outsz(6) == 8);
-
-    assert(algo_base64_decode_outsz(0) == 0);
-    assert(algo_base64_decode_outsz(1) == 3);
-    assert(algo_base64_decode_outsz(2) == 3);
-    assert(algo_base64_decode_outsz(3) == 3);
-    assert(algo_base64_decode_outsz(4) == 3);
-    assert(algo_base64_decode_outsz(5) == 6);
-    assert(algo_base64_decode_outsz(6) == 6);
-}
-#endif
-#endif
 
 /* vi:set ts=4 sw=4 expandtab: */
