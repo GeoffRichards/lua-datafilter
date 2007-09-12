@@ -47,7 +47,7 @@ typedef struct Base64DecodeState_ {
     int seen_end;
     unsigned char n[4];
     unsigned int count;
-    int allow_whitespace, allow_missing_padding;
+    int allow_whitespace, allow_invalid_characters, allow_missing_padding;
 } Base64DecodeState;
 
 /*static size_t
@@ -208,11 +208,16 @@ algo_base64_decode_init (Filter *filter, int options_pos) {
     state->seen_end = 0;
     state->count = 0;
     state->allow_whitespace = 1;
+    state->allow_invalid_characters = 0;
     state->allow_missing_padding = 0;
 
     if (options_pos) {
         lua_getfield(L, options_pos, "allow_whitespace");
         state->allow_whitespace = lua_isnil(L, -1) || lua_toboolean(L, -1);
+        lua_pop(L, 1);
+
+        lua_getfield(L, options_pos, "allow_invalid_characters");
+        state->allow_invalid_characters = lua_toboolean(L, -1);
         lua_pop(L, 1);
 
         lua_getfield(L, options_pos, "allow_missing_padding");
@@ -274,9 +279,10 @@ algo_base64_decode (Filter *filter,
         byte = *in++;
         c = base64_char_value[byte];
         if (c > 64) {
-            if (!state->allow_whitespace || !my_isspace(byte))
-                ALGO_ERROR("invalid character in input");
-            continue;   /* skip whitespace */
+            if (state->allow_invalid_characters ||
+                (state->allow_whitespace && my_isspace(byte)))
+                continue;
+            ALGO_ERROR("invalid character in input");
         }
         else if (c == 64 && state->count < 2)
             ALGO_ERROR("padding characters should only occur at the end");

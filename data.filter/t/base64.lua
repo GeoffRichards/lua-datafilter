@@ -2,8 +2,7 @@ require "datafilter-test"
 local Filter = require "data.filter"
 local testcase = TestCase("Algorithms base64_decode and base64_encode")
 
-local misc_mapping
-local single_byte_mapping
+local misc_mapping, single_byte_mapping, bad_char_encodings
 
 function testcase:test_trivial_obj ()
     local obj = Filter:new("base64_encode")
@@ -212,6 +211,21 @@ function testcase:test_spare_bits_set ()
     local last = {"B","C","D","E","F","G","H","I","J","K","L","M","N","O","P"}
     for _, letter in ipairs(last) do
         test_spare_bits("e" .. letter .. "==")
+    end
+end
+
+function testcase:test_bad_chars_error ()
+    for _, input in ipairs(bad_char_encodings) do
+        assert_error("bad characters detected: " .. string.format("%q", input),
+                     function () Filter.base64_decode(input) end)
+    end
+end
+
+function testcase:test_bad_chars_error ()
+    local options = { allow_invalid_characters = true }
+    for _, input in ipairs(bad_char_encodings) do
+        is("frob", Filter.base64_decode(input, options),
+           "bad characters skipped: " .. string.format("%q", input))
     end
 end
 
@@ -485,6 +499,23 @@ single_byte_mapping = {
     ["\253"] = "/Q==",
     ["\254"] = "/g==",
     ["\255"] = "/w==",
+}
+
+-- All of these contain illegal characters, but if those are ignored then
+-- they all decode to 'frob'.
+bad_char_encodings = {
+    "*ZnJvYg==",
+    "Zn*JvYg==",
+    "ZnJv*Yg==",
+    "ZnJvYg*==",
+    "ZnJvYg=*=",
+    "ZnJvYg==*",
+    "*Z*n*J*v*Y*g*=*=*",
+    "\0\1\2\3\4\5\6\7\8\11\14\15ZnJvYg==",
+    "\16\17\18\19\20\21\22\23\24\25\26\27\28\29\30\31ZnJvYg==",
+    "!\"#$%&'()*,-.ZnJvYg==",
+    ":;<>?@[\\]^_`{|}~\127ZnJvYg==",
+    "\128\159\160\255ZnJvYg==",
 }
 
 lunit.run()
