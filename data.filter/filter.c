@@ -92,15 +92,7 @@ init_filter (Filter *filter, lua_State *L, const AlgorithmDefinition *def,
 }
 
 static void
-filter_finished_cleanup (lua_State *L, Filter *filter) {
-    unsigned char *out_max;
-
-    filter->finished = 1;
-
-    out_max = filter->buf_out + filter->buf_out_size;
-    if (filter->buf_out_end != filter->buf_out)
-        filter->do_output(filter, filter->buf_out_end, &out_max);
-
+filter_cleanup (lua_State *L, Filter *filter) {
     if (filter->c_fh) {
         if (fclose(filter->c_fh))
             luaL_error(L, "error closing output file handle: %s",
@@ -115,6 +107,19 @@ filter_finished_cleanup (lua_State *L, Filter *filter) {
 }
 
 static void
+filter_finished_cleanup (lua_State *L, Filter *filter) {
+    unsigned char *out_max;
+
+    filter->finished = 1;
+
+    out_max = filter->buf_out + filter->buf_out_size;
+    if (filter->buf_out_end != filter->buf_out)
+        filter->do_output(filter, filter->buf_out_end, &out_max);
+
+    filter_cleanup(L, filter);
+}
+
+static void
 add_input_data (Filter *filter, const unsigned char *data, size_t len) {
     if (len > 0) {
         memcpy(filter->buf_in_end, data, len);
@@ -122,7 +127,17 @@ add_input_data (Filter *filter, const unsigned char *data, size_t len) {
     }
 }
 
-static void
+/* This can be used by algorithms to report an error.  They should never
+ * throw an exception directly because do_filtering() needs to be able to
+ * do cleanup first. */
+#define ALGO_ERROR(msg) do { \
+    lua_pushstring(filter->L, msg); \
+    return 0; \
+} while (0)
+
+/* This returns true if there was an error, which the algorithm must have
+ * place as a string at the top of the stack. */
+static int
 do_filtering (Filter *filter, int eof) {
     size_t bytes_left_over;
     unsigned char *left_over;
@@ -130,6 +145,8 @@ do_filtering (Filter *filter, int eof) {
     left_over = (unsigned char *) filter->func(
         filter, filter->buf_in, filter->buf_in_end,
         filter->buf_out_end, filter->buf_out + filter->buf_out_size, eof);
+    if (!left_over)
+        return 1;
 
     if (eof) {
         assert(left_over == filter->buf_in_end);
@@ -141,6 +158,8 @@ do_filtering (Filter *filter, int eof) {
             memmove(filter->buf_in, left_over, bytes_left_over);
         filter->buf_in_end = filter->buf_in + bytes_left_over;
     }
+
+    return 0;
 }
 
 static void
@@ -256,6 +275,7 @@ algo_wrapper (lua_State *L, const AlgorithmDefinition *def) {
     void *alloc_ud;
     int num_args = lua_gettop(L);
     int options_pos = 0;
+    int had_error;
 
     if (num_args > 2)
         return luaL_error(L, "too many arguments to algorithm function");
@@ -281,12 +301,16 @@ algo_wrapper (lua_State *L, const AlgorithmDefinition *def) {
     luaL_buffinit(L, filter->lbuf);
     filter->do_output = output_lbuf;
 
-    do_filtering(filter, 1);
+    had_error = do_filtering(filter, 1);
     filter_finished_cleanup(L, filter);
+    if (!had_error)
+        luaL_pushresult(filter->lbuf);
 
-    luaL_pushresult(filter->lbuf);
     destroy_filter(L, filter);
     filter->alloc(filter->alloc_ud, filter, filter->filter_object_size, 0);
+
+    if (had_error)
+        return lua_error(L);
     return 1;
 }
 
@@ -425,7 +449,8 @@ filter_add (lua_State *L) {
 
         add_input_data(filter, (const unsigned char *) s, load_bytes);
         s += load_bytes;
-        do_filtering(filter, 0);
+        if (do_filtering(filter, 0))
+            return lua_error(L);
     }
 
     return 0;
@@ -452,7 +477,10 @@ filter_addfile_filename (lua_State *L, Filter *filter, const char *filename) {
         }
 
         filter->buf_in_end += bytes_read;
-        do_filtering(filter, 0);
+        if (do_filtering(filter, 0)) {
+            fclose(f);
+            lua_error(L);
+        }
     }
 
     fclose(f);
@@ -492,7 +520,8 @@ filter_addfile_function (lua_State *L, Filter *filter,
 
         data = lua_tolstring(L, -2, &bytes_read);
         add_input_data(filter, (const unsigned char *) data, bytes_read);
-        do_filtering(filter, 0);
+        if (do_filtering(filter, 0))
+            lua_error(L);
 
         lua_pop(L, 2);
     }
@@ -546,7 +575,10 @@ filter_result (lua_State *L) {
                           " string");
 
     if (!filter->finished) {
-        do_filtering(filter, 1);
+        if (do_filtering(filter, 1)) {
+            filter_cleanup(L, filter);
+            return lua_error(L);
+        }
         filter_finished_cleanup(L, filter);
     }
 
@@ -562,7 +594,10 @@ filter_finish (lua_State *L) {
     if (filter->finished)
         return luaL_error(L, "output has been finished");
 
-    do_filtering(filter, 1);
+    if (do_filtering(filter, 1)) {
+        filter_cleanup(L, filter);
+        return lua_error(L);
+    }
     filter_finished_cleanup(L, filter);
 
     return 0;

@@ -47,6 +47,7 @@ typedef struct Base64DecodeState_ {
     int seen_end;
     unsigned char n[4];
     unsigned int count;
+    int disallow_whitespace;
 } Base64DecodeState;
 
 /*static size_t
@@ -201,9 +202,18 @@ algo_base64_decode_outsz (size_t input_size) {
 static void
 algo_base64_decode_init (Filter *filter, int options_pos) {
     Base64DecodeState *state = ALGO_STATE(filter);
+    lua_State *L = filter->L;
     (void) options_pos;     /* unused */
+
     state->seen_end = 0;
     state->count = 0;
+    state->disallow_whitespace = 0;
+
+    if (options_pos) {
+        lua_getfield(L, options_pos, "disallow_whitespace");
+        state->disallow_whitespace = lua_toboolean(L, -1);
+        lua_pop(L, 1);
+    }
 }
 
 static unsigned char *
@@ -244,6 +254,11 @@ do_base64_decode_block (Filter *filter, Base64DecodeState *state,
     return out;
 }
 
+/* Define this myself so that it's not locale dependent.  Also it doesn't
+ * allow vertical tabs as whitespace, because nobody uses them. */
+#define my_isspace(c) ((c) == 32 || (c) == 10 || (c) == 13 || (c) == 9 || \
+                       (c) == 12)
+
 static const unsigned char *
 algo_base64_decode (Filter *filter,
                     const unsigned char *in, const unsigned char *in_end,
@@ -251,12 +266,16 @@ algo_base64_decode (Filter *filter,
 {
     Base64DecodeState *state = ALGO_STATE(filter);
     unsigned char *n = state->n;
-    unsigned char c;
+    unsigned char byte, c;
 
     while (in != in_end) {
-        c = base64_char_value[*in++];
-        if (c > 64)
-            assert(0);  /* TODO - not in base64 alphabet */
+        byte = *in++;
+        c = base64_char_value[byte];
+        if (c > 64) {
+            if (state->disallow_whitespace || !my_isspace(byte))
+                ALGO_ERROR("invalid character in input");
+            continue;   /* skip whitespace */
+        }
         else if (c == 64 && state->count < 2)
             assert(0);  /* TODO - padding in wrong place */
         n[state->count++] = c;

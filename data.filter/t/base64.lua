@@ -40,6 +40,44 @@ function testcase:test_single_byte_decode ()
     end
 end
 
+function testcase:test_decode_with_whitespace ()
+    is("", Filter.base64_decode("  \t\n\r \13\10 "), "just whitespace")
+    is("xyz", Filter.base64_decode("eHl6   "), "whitespace after")
+    is("xyz", Filter.base64_decode(" e  H l 6 "),
+       "whitespace intermingled")
+    is("xy", Filter.base64_decode(" e  H k = "),
+       "whitespace intermingled, one padding char")
+    is("x", Filter.base64_decode(" e  A = = "),
+       "whitespace intermingled, two padding chars")
+end
+
+function testcase:test_big_whitespace ()
+    is("", Filter.base64_decode((" "):rep(8192)), "bufsize whitespace")
+
+    for i = 8187, 8193 do
+        is("xyz", Filter.base64_decode((" "):rep(i) .. "eHl6"),
+           i .. " bytes of whitespace plus block")
+    end
+
+    for i = 8187, 8193 do
+        is("xyz", Filter.base64_decode("eHl6" .. (" "):rep(i)),
+           "block plus " .. i .. " bytes of whitespace")
+    end
+end
+
+function testcase:test_whitespace_not_allowed ()
+    local encoded_cases = { "eHl6", "eHk=", "eA==", "" }
+    local options = { disallow_whitespace = true }
+    for _, encoded in ipairs(encoded_cases) do
+        for space_pos = 0, encoded:len() do
+            local input = encoded:sub(1, space_pos) .. " " ..
+                          encoded:sub(space_pos + 1)
+            assert_error("whitespace not allowed in [" .. input .. "]",
+                         function () Filter.base64_decode(input, options) end)
+        end
+    end
+end
+
 function testcase:test_oo_encode ()
     local obj = Filter:new("base64_encode")
     obj:add("Aladdin")
