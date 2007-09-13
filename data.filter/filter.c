@@ -65,6 +65,7 @@ hex_char_codes_upper[16] = {
 static const unsigned char *
 my_strduplen (Filter *filter, const unsigned char *s, size_t len) {
     unsigned char *newstr = filter->alloc(filter->alloc_ud, 0, 0, len);
+    assert(newstr);
     memcpy(newstr, s, len);
     return newstr;
 }
@@ -209,6 +210,7 @@ output_string (Filter *filter, const unsigned char *out_end,
     size_t new_size = filter->buf_out_size * 2;
     unsigned char *out = filter->alloc(filter->alloc_ud, filter->buf_out,
                                        filter->buf_out_size, new_size);
+    assert(out);
     filter->buf_out_end = out + (out_end - filter->buf_out);
     filter->buf_out = out;
     filter->buf_out_size = new_size;
@@ -387,6 +389,7 @@ filter_new (lua_State *L) {
 
     filter->buf_in = filter->buf_in_end
                    = filter->alloc(filter->alloc_ud, 0, 0, BUFSIZ);
+    assert(filter->buf_in);
     filter->buf_in_size = BUFSIZ;
     filter->buf_in_free = 1;
     filter->do_output = 0;
