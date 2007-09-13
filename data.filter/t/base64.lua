@@ -119,6 +119,7 @@ function testcase:test_eol ()
     test_with_line_breaking("\13")
     test_with_line_breaking("\10")
     test_with_line_breaking("foobar baz")
+    test_with_line_breaking("")
 end
 
 function testcase:test_eol_defaults ()

@@ -56,6 +56,7 @@ algo_base64_encode_init (Filter *filter, int options_pos) {
     lua_State *L = filter->L;
     const char *s;
     lua_Integer n;
+    int specified_line_ending = 0;
 
     state->line_ending = 0;
     state->line_ending_len = 0;
@@ -74,9 +75,14 @@ algo_base64_encode_init (Filter *filter, int options_pos) {
                 luaL_error(L, "bad value for 'line_ending' option,"
                            " should be a string");
             s = lua_tolstring(L, -1, &state->line_ending_len);
-            state->line_ending = my_strduplen(
-                filter, (unsigned char *) s, state->line_ending_len);
-            state->max_line_length = EMAIL_MAX_LINE_LENGTH;
+            if (state->line_ending_len == 0)
+                state->line_ending = 0;
+            else {
+                state->line_ending = my_strduplen(
+                    filter, (unsigned char *) s, state->line_ending_len);
+                state->max_line_length = EMAIL_MAX_LINE_LENGTH;
+            }
+            specified_line_ending = 1;
         }
         lua_pop(L, 1);
 
@@ -90,7 +96,7 @@ algo_base64_encode_init (Filter *filter, int options_pos) {
                 luaL_error(L, "bad value for 'max_line_length' option,"
                            " must be greater than zero");
             state->max_line_length = n;
-            if (!state->line_ending) {
+            if (!specified_line_ending) {
                 state->line_ending = default_line_ending;
                 state->line_ending_len = sizeof(default_line_ending);
             }
