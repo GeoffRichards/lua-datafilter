@@ -1,4 +1,5 @@
 # name		instance-struct		has destructor?
+adler32		Adler32			0
 base64_decode	Base64Decode		0
 base64_encode	Base64Encode		1
 hex_lower	-			0
