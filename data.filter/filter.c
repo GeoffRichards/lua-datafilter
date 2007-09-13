@@ -49,6 +49,19 @@ typedef struct AlgorithmDefinition_ {
     AlgorithmDestroyFunction destroy_func;
 } AlgorithmDefinition;
 
+static const unsigned char default_line_ending[] = { 13, 10 };
+
+#define EMAIL_MAX_LINE_LENGTH 76
+
+static const unsigned char
+hex_char_codes_lower[16] = {
+    48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 97, 98, 99, 100, 101, 102
+};
+static const unsigned char
+hex_char_codes_upper[16] = {
+    48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 65, 66, 67, 68, 69, 70
+};
+
 static const unsigned char *
 my_strduplen (Filter *filter, const unsigned char *s, size_t len) {
     unsigned char *newstr = filter->alloc(filter->alloc_ud, 0, 0, len);
@@ -312,6 +325,7 @@ algo_wrapper (lua_State *L, const AlgorithmDefinition *def) {
 }
 
 #include "algo/base64.c"
+#include "algo/qp.c"
 #include "algo/md5.c"
 #include "algo/sha1.c"
 #include "algo/adler32.c"

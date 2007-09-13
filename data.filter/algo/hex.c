@@ -1,14 +1,5 @@
 /* data.filter algorithms: base64_encode, base64_decode */
 
-static const unsigned char
-hex_char_codes_lower[16] = {
-    48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 97, 98, 99, 100, 101, 102
-};
-static const unsigned char
-hex_char_codes_upper[16] = {
-    48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 65, 66, 67, 68, 69, 70
-};
-
 static const unsigned char *
 algo_hex_lower (Filter *filter,
                 const unsigned char *in, const unsigned char *in_end,

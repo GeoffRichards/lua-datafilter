@@ -50,8 +50,6 @@ typedef struct Base64DecodeState_ {
     int allow_whitespace, allow_invalid_characters, allow_missing_padding;
 } Base64DecodeState;
 
-static const unsigned char default_line_ending[2] = { 13, 10 };
-
 static void
 algo_base64_encode_init (Filter *filter, int options_pos) {
     Base64EncodeState *state = ALGO_STATE(filter);
@@ -78,7 +76,7 @@ algo_base64_encode_init (Filter *filter, int options_pos) {
             s = lua_tolstring(L, -1, &state->line_ending_len);
             state->line_ending = my_strduplen(
                 filter, (unsigned char *) s, state->line_ending_len);
-            state->max_line_length = 76;
+            state->max_line_length = EMAIL_MAX_LINE_LENGTH;
         }
         lua_pop(L, 1);
 
@@ -94,7 +92,7 @@ algo_base64_encode_init (Filter *filter, int options_pos) {
             state->max_line_length = n;
             if (!state->line_ending) {
                 state->line_ending = default_line_ending;
-                state->line_ending_len = 2;
+                state->line_ending_len = sizeof(default_line_ending);
             }
         }
         lua_pop(L, 1);
