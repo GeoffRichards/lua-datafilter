@@ -230,6 +230,22 @@ function testcase:test_bad_chars_error ()
     end
 end
 
+function testcase:test_bad_usage ()
+    local options = { line_ending = true }
+    assert_error("bad type for line_ending option",
+                 function () Filter.base64_encode("foo", options) end)
+
+    options = { max_line_length = "bad" }
+    assert_error("bad type for max_line_length option",
+                 function () Filter.base64_encode("foo", options) end)
+    options = { max_line_length = 0 }
+    assert_error("max_line_length must not be zero",
+                 function () Filter.base64_encode("foo", options) end)
+    options = { max_line_length = -23 }
+    assert_error("max_line_length must not be negative",
+                 function () Filter.base64_encode("foo", options) end)
+end
+
 misc_mapping = {
     -- Test data from RFC 4648, section 10
     [""] = "",

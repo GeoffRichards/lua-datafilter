@@ -109,7 +109,7 @@ typedef struct QPEncodeState_ {
     size_t line_ending_len, cur_line_length;
 } QPEncodeState;
 
-static void
+static int
 algo_qp_encode_init (Filter *filter, int options_pos) {
     QPEncodeState *state = ALGO_STATE(filter);
     lua_State *L = filter->L;
@@ -123,8 +123,8 @@ algo_qp_encode_init (Filter *filter, int options_pos) {
         lua_getfield(L, options_pos, "line_ending");
         if (!lua_isnil(L, -1)) {
             if (!lua_isstring(L, -1))
-                luaL_error(L, "bad value for 'line_ending' option,"
-                           " should be a string");
+                ALGO_ERROR("bad value for 'line_ending' option, should be a"
+                           " string");
             s = lua_tolstring(L, -1, &state->line_ending_len);
             if (state->line_ending_len == 0)
                 state->line_ending = 0;
@@ -134,6 +134,8 @@ algo_qp_encode_init (Filter *filter, int options_pos) {
         }
         lua_pop(L, 1);
     }
+
+    return 1;
 }
 
 static void

@@ -50,7 +50,7 @@ typedef struct Base64DecodeState_ {
     int allow_whitespace, allow_invalid_characters, allow_missing_padding;
 } Base64DecodeState;
 
-static void
+static int
 algo_base64_encode_init (Filter *filter, int options_pos) {
     Base64EncodeState *state = ALGO_STATE(filter);
     lua_State *L = filter->L;
@@ -72,8 +72,8 @@ algo_base64_encode_init (Filter *filter, int options_pos) {
         lua_getfield(L, options_pos, "line_ending");
         if (!lua_isnil(L, -1)) {
             if (!lua_isstring(L, -1))
-                luaL_error(L, "bad value for 'line_ending' option,"
-                           " should be a string");
+                ALGO_ERROR("bad value for 'line_ending' option, should be a"
+                           " string");
             s = lua_tolstring(L, -1, &state->line_ending_len);
             if (state->line_ending_len == 0)
                 state->line_ending = 0;
@@ -89,12 +89,12 @@ algo_base64_encode_init (Filter *filter, int options_pos) {
         lua_getfield(L, options_pos, "max_line_length");
         if (!lua_isnil(L, -1)) {
             if (!lua_isnumber(L, -1))
-                luaL_error(L, "bad value for 'max_line_length' option,"
-                           " should be a number");
+                ALGO_ERROR("bad value for 'max_line_length' option, should be"
+                           " a number");
             n = lua_tonumber(L, -1);
             if (n <= 0)
-                luaL_error(L, "bad value for 'max_line_length' option,"
-                           " must be greater than zero");
+                ALGO_ERROR("bad value for 'max_line_length' option, must be"
+                           " greater than zero");
             state->max_line_length = n;
             if (!specified_line_ending) {
                 state->line_ending = default_line_ending;
@@ -103,6 +103,8 @@ algo_base64_encode_init (Filter *filter, int options_pos) {
         }
         lua_pop(L, 1);
     }
+
+    return 1;
 }
 
 static void
@@ -193,7 +195,7 @@ algo_base64_encode (Filter *filter,
     return in;
 }
 
-static void
+static int
 algo_base64_decode_init (Filter *filter, int options_pos) {
     Base64DecodeState *state = ALGO_STATE(filter);
     lua_State *L = filter->L;
@@ -218,6 +220,8 @@ algo_base64_decode_init (Filter *filter, int options_pos) {
         state->allow_missing_padding = lua_toboolean(L, -1);
         lua_pop(L, 1);
     }
+
+    return 1;
 }
 
 static unsigned char *
@@ -302,7 +306,7 @@ algo_base64_decode (Filter *filter,
                 return 0;
         }
     }
-    
+
     filter->buf_out_end = out;
     return in;
 }

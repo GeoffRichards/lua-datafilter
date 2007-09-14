@@ -66,7 +66,7 @@ typedef struct SHA1State_ {
     uint32_t len_low, len_high;
 } SHA1State;
 
-static void
+static int
 algo_sha1_init (Filter *filter, int options_pos) {
     SHA1State *state = ALGO_STATE(filter);
     (void) options_pos;     /* unused */
@@ -78,6 +78,7 @@ algo_sha1_init (Filter *filter, int options_pos) {
     state->h[4] = 0xC3D2E1F0;
 
     state->len_low = state->len_high = 0;
+    return 1;
 }
 
 static const unsigned char *

@@ -5,13 +5,15 @@ typedef struct Adler32State_ {
     unsigned int s1, s2;
 } Adler32State;
 
-static void
+static int
 algo_adler32_init (Filter *filter, int options_pos) {
     Adler32State *state = ALGO_STATE(filter);
     (void) options_pos;     /* unused */
 
     state->s1 = 1;
     state->s2 = 0;
+
+    return 1;
 }
 
 static const unsigned char *

@@ -37,7 +37,7 @@ typedef struct Filter_ {
 
 typedef int (*AlgorithmWrapperFunction) (lua_State *L);
 /*typedef size_t (*AlgorithmSizeFunction) (size_t input_size);*/
-typedef void (*AlgorithmInitFunction) (Filter *filter, int options_pos);
+typedef int (*AlgorithmInitFunction) (Filter *filter, int options_pos);
 
 typedef struct AlgorithmDefinition_ {
     const char *name;
@@ -77,12 +77,13 @@ my_strduplen (Filter *filter, const unsigned char *s, size_t len) {
     return newstr;
 }
 
-static void
+static int
 init_filter (Filter *filter, lua_State *L, const AlgorithmDefinition *def,
              int options_pos)
 {
     lua_Alloc alloc;
     void *alloc_ud;
+    int stacktop;
 
     alloc = lua_getallocf(L, &alloc_ud);
 
@@ -96,6 +97,7 @@ init_filter (Filter *filter, lua_State *L, const AlgorithmDefinition *def,
     filter->l_fh_ref = LUA_NOREF;
 
     filter->buf_out = filter->buf_in = 0;
+    filter->buf_in_free = 0;
     filter->lbuf = 0;
     filter->destroy_func = 0;
 
@@ -103,10 +105,21 @@ init_filter (Filter *filter, lua_State *L, const AlgorithmDefinition *def,
     assert(filter->buf_out);
     filter->buf_out_size = BUFSIZ;
 
-    if (def->init_func)
-        def->init_func(filter, options_pos);
     filter->destroy_func = def->destroy_func;
     filter->func = def->func;
+
+    stacktop = lua_gettop(L);
+    if (def->init_func && !def->init_func(filter, options_pos)) {
+        /* There was an error initializing the object.  Should be an error
+         * message on the top of the stack, but the init function might have
+         * left other stuff below that, so tidy it away. */
+        ++stacktop;
+        while (lua_gettop(L) > stacktop)
+            lua_remove(L, stacktop);
+        return 0;
+    }
+
+    return 1;
 }
 
 static void
@@ -308,19 +321,23 @@ algo_wrapper (lua_State *L, const AlgorithmDefinition *def) {
 
     filter = alloc(alloc_ud, 0, 0, sizeof(Filter) + def->state_size);
     assert(filter);
-    init_filter(filter, L, def, options_pos);
+    had_error = !init_filter(filter, L, def, options_pos);
 
-    filter->buf_in = s;
-    filter->buf_in_end = s + len;
-    filter->buf_in_size = len;
-    filter->buf_in_free = 0;
+    if (!had_error) {
+        filter->buf_in = s;
+        filter->buf_in_end = s + len;
+        filter->buf_in_size = len;
+        filter->buf_in_free = 0;
 
-    filter->lbuf = filter->alloc(filter->alloc_ud, 0, 0, sizeof(luaL_Buffer));
-    assert(filter->lbuf);
-    luaL_buffinit(L, filter->lbuf);
-    filter->do_output = output_lbuf;
+        filter->lbuf = filter->alloc(filter->alloc_ud, 0, 0,
+                                     sizeof(luaL_Buffer));
+        assert(filter->lbuf);
+        luaL_buffinit(L, filter->lbuf);
+        filter->do_output = output_lbuf;
 
-    had_error = do_filtering(filter, 1);
+        had_error = do_filtering(filter, 1);
+    }
+
     filter_finished_cleanup(L, filter);
     if (!had_error)
         luaL_pushresult(filter->lbuf);
@@ -388,10 +405,14 @@ filter_new (lua_State *L) {
         options_pos = 4;
     }
 
-    /* Create the filter object.  This is on the stack, so if anything goes
-     * wrong after this Lua will be able to clean it up. */
+    /* Create the filter object.  If there's an error initializing it, make
+     * sure the userdata is cleaned up properly. */
     filter = lua_newuserdata(L, sizeof(Filter) + def->state_size);
-    init_filter(filter, L, def, options_pos);
+    if (!init_filter(filter, L, def, options_pos)) {
+        destroy_filter(L, filter);
+        return lua_error(L);
+    }
+
     luaL_getmetatable(L, FILTER_MT_NAME);
     lua_setmetatable(L, -2);
 

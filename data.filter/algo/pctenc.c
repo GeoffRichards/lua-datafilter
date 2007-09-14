@@ -17,7 +17,7 @@ typedef struct PercentEncodeState_ {
     char safe_bytes[256];
 } PercentEncodeState;
 
-static void
+static int
 init_safe_bytes (Filter *filter, PercentEncodeState *state,
                  const unsigned char *s, size_t slen)
 {
@@ -31,15 +31,16 @@ init_safe_bytes (Filter *filter, PercentEncodeState *state,
     for (i = 0; i < slen; ++i) {
         c = s[i];
         if (c == 37)
-            luaL_error(filter->L, "percent bytes must always be encoded");
+            ALGO_ERROR("percent bytes must always be encoded");
         else if (safe_bytes[c])
-            luaL_error(filter->L, "byte value listed twice in 'safe_bytes'"
-                       " option");
+            ALGO_ERROR("byte value listed twice in 'safe_bytes' option");
         safe_bytes[c] = 1;
     }
+
+    return 1;
 }
 
-static void
+static int
 algo_percent_encode_init (Filter *filter, int options_pos) {
     PercentEncodeState *state = ALGO_STATE(filter);
     lua_State *L = filter->L;
@@ -52,18 +53,20 @@ algo_percent_encode_init (Filter *filter, int options_pos) {
         lua_getfield(L, options_pos, "safe_bytes");
         if (!lua_isnil(L, -1)) {
             if (!lua_isstring(L, -1))
-                luaL_error(L, "bad value for 'safe_bytes' option,"
-                           " should be a string");
+                ALGO_ERROR("bad value for 'safe_bytes' option, should be a"
+                           " string");
             s = lua_tolstring(L, -1, &slen);
-            init_safe_bytes(filter, state, (unsigned char *) s, slen);
+            if (!init_safe_bytes(filter, state, (unsigned char *) s, slen))
+                return 0;
             safe_bytes_initialized = 1;
         }
         lua_pop(L, 1);
     }
 
     if (!safe_bytes_initialized)
-        init_safe_bytes(filter, state, pctenc_default_safe_bytes,
-                        sizeof(pctenc_default_safe_bytes));
+        return init_safe_bytes(filter, state, pctenc_default_safe_bytes,
+                               sizeof(pctenc_default_safe_bytes));
+    return 1;
 }
 
 static const unsigned char *

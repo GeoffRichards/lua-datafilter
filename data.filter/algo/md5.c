@@ -154,15 +154,18 @@ typedef struct MD5State_ {
     unsigned long len_low, len_high; /* assume 32 bit each for 64 bit length */
 } MD5State;
 
-static void
+static int
 algo_md5_init (Filter *filter, int options_pos) {
     MD5State *decoder_state = ALGO_STATE(filter);
     (void) options_pos;     /* unused */
+
     decoder_state->d[0] = 0x67452301;
     decoder_state->d[1] = 0xEFCDAB89;
     decoder_state->d[2] = 0x98BADCFE;
     decoder_state->d[3] = 0x10325476;
+
     decoder_state->len_low = decoder_state->len_high = 0;
+    return 1;
 }
 
 static const unsigned char *

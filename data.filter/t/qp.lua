@@ -43,6 +43,12 @@ end
 --=ED=EE=EF=F0=F1=F2=F3=F4=F5=F6=F7=F8=F9=FA=FB=FC=FD=FE=FF=
 --EOT
 
+function testcase:test_bad_usage ()
+    local options = { line_ending = true }
+    assert_error("bad type for line_ending option",
+                 function () Filter.qp_encode("foo", options) end)
+end
+
 -- This test data was borrowed from the Perl module MIME::Base64 version 3.07.
 mapping_both_ways = {
     -- plain ascii should not be encoded

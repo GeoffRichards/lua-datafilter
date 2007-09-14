@@ -59,5 +59,12 @@ function testcase:test_exception_in_algo_oo ()
                  function () obj:add("eH l6"); obj:result() end)
 end
 
+function testcase:test_handle_init_error_oo ()
+    -- The non-OO version of this is tested in each algorithms tests.
+    local options = { line_ending = true }
+    assert_error("bad type for line_ending option",
+                 function () Filter:new("base64_encode", nil, options) end)
+end
+
 lunit.run()
 -- vi:ts=4 sw=4 expandtab
