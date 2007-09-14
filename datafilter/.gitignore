@@ -6,3 +6,6 @@ algorithms.c
 core
 datafilter.dll
 liblua-datafilter.la
+lua-datafilter-*.tar.bz2
+lua-datafilter-*.tar.gz
+lua-datafilter-*.win32.zip

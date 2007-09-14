@@ -1,0 +1,22 @@
+This package contains a Windows DLL for the Lua-DataFilter package.
+
+For more information about this Lua module, and for the source code and
+documentation, visit its website:
+
+    http://www.daizucms.org/lua/library/datafilter/
+
+This is an experimental build, so use at your own risk.  The library has
+been tested on a Windows XP box and on Debian unstable under Wine, and it
+appears to work, but this is the first time I've tried to distribute a
+Windows binary package, so I don't know how portable it will be.
+
+The library was built using MingW32 as a cross-compiler on Linux.  To
+replicate this, download the Lua-DataFilter source code, install the
+'mingw32' Debian package (I used version 3.4.5.20060117.1.dfsg-3), and run
+"make win32bin".  You'll also need to unpack the Lua header files into a
+directory called 'include' in the current directory, and have the Lua
+library DLL in the current directory as well.
+
+This binary package was built against Lua5.1.dll from the LuaBinaries
+package 'lua5_1_2_Win32_dll_lib.zip'.  It may not work with other builds
+of Lua.

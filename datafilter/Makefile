@@ -1,4 +1,4 @@
-PACKAGE=Lua-DataFilter
+PACKAGE=lua-datafilter
 VERSION=$(shell head -1 Changes | sed 's/ .*//')
 RELEASEDATE=$(shell head -1 Changes | sed 's/.* //')
 PREFIX=/usr/local
@@ -33,7 +33,7 @@ DEBUG := -g
 #DEBUG := $(DEBUG) -pg
 #DEBUG := $(DEBUG) -fprofile-arcs -ftest-coverage
 
-all: liblua-datafilter.la
+all: liblua-datafilter.la manpages
 
 # This is for building the Windows DLL for the module.  You might have to
 # tweak the location of the MingW32 compiler and the Lua library and include
@@ -77,25 +77,32 @@ test: all
 	for f in t/*.lua; do $(VALGRIND) lua $$f; done
 
 install: all
-	mkdir -p $(LUA_SPATH)/ISBN
-	install --mode=644 ISBN.lua $(LUA_SPATH)/
-	install --mode=644 ISBN/_data.lua $(LUA_SPATH)/ISBN/
+	mkdir -p $(LUA_SPATH)
+	install --mode=644 liblua-datafilter.so.0.0.0 $(LUA_SPATH)/datafilter.so
 	mkdir -p $(PREFIX)/share/man/man3
-	gzip -c doc/lua-datafilter.3 >$(PREFIX)/share/man/man3/lua-datafilter.3.gz
+	for manpage in datafilter datafilter-base64 datafilter-qp datafilter-pctenc; do \
+	    gzip -c doc/lua-$$manpage.3 >$(PREFIX)/share/man/man3/lua-$$manpage.3.gz
 
 
-dist: all
+checktmp:
 	@if [ -e tmp ]; then \
 	    echo "Can't proceed if file 'tmp' exists"; \
 	    false; \
 	fi
+dist: all checktmp
 	mkdir -p tmp/$(DISTNAME)
 	tar cf - --files-from MANIFEST | (cd tmp/$(DISTNAME) && tar xf -)
 	cd tmp && tar cf - $(DISTNAME) | gzip -9 >../$(DISTNAME).tar.gz
 	cd tmp && tar cf - $(DISTNAME) | bzip2 -9 >../$(DISTNAME).tar.bz2
-	rm -f $(DISTNAME).zip
-	cd tmp && zip -q -r ../$(DISTNAME).zip $(DISTNAME)
 	rm -rf tmp
+win32dist: win32bin checktmp
+	mkdir -p tmp/$(DISTNAME).win32
+	rm -f $(DISTNAME).win32.zip
+	cp datafilter.dll tmp/$(DISTNAME).win32/
+	cp README.win32bin tmp/$(DISTNAME).win32/README
+	cd tmp && zip -q -r ../$(DISTNAME).win32.zip $(DISTNAME).win32
+	rm -rf tmp
+
 
 # Dependencies.
 %.d: %.c
@@ -124,4 +131,4 @@ clean:
 realclean: clean
 	rm -f algorithms.c
 
-.PHONY: all win32bin test install dist clean realclean
+.PHONY: all win32bin test install checktmp dist win32dist clean realclean
