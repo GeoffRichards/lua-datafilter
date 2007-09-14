@@ -1,0 +1,32 @@
+Source: lua-datafilter
+Section: interpreters
+Priority: optional
+Maintainer: Geoff Richards <geoff@laxan.com>
+Build-Depends: cdbs (>= 0.4.23-1.1), debhelper (>= 5), dpatch, lua5.1-policy-dev (>= 8)
+Standards-Version: 3.7.2
+
+Package: liblua5.1-datafilter0
+Architecture: any
+Depends: ${shlibs:Depends}
+Description: useful data-munging algorithms for Lua
+ This Lua library makes it convenient to process data using various
+ algorithms, and to handle arbitrarily large amounts of input and output data
+ with them.
+ .
+ Currently the algorithms supported are: MD5 and SHA-1 message digests,
+ Adler32 checksumming, Base64 encoding and decoding, quoted-printable
+ encoding and decoding, encoding binary data as hexadecimal, and percent/URI
+ encoding and decoding.
+ .
+ The latest source code and documentation is always available from the
+ module's website: <http://www.daizucms.org/lua/library/datafilter/>
+
+Package: liblua5.1-datafilter-dev
+Architecture: any
+Depends: liblua5.1-datafilter0 (= ${binary:Version})
+Description: documentation for the Lua datafilter module
+ This package contains documentation for the liblua5.1-datafilter package,
+ in several man pages, the main one being lua-datafilter(3).  These describe
+ the complete API of the Lua module.  A more attractive version of the same
+ thing is available on the module's website:
+ <http://www.daizucms.org/lua/library/datafilter/doc/>
