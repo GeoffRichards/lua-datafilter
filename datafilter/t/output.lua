@@ -1,5 +1,5 @@
 require "datafilter-test"
-local Filter = require "data.filter"
+local Filter = require "datafilter"
 local testcase = TestCase("Different output methods in OO API")
 
 local big_expected = ("YWJjZGVmZ2hpamts"):rep(8192)

@@ -1,4 +1,4 @@
-/* data.filter algorithms: base64_encode, base64_decode */
+/* lua-datafilter algorithms: base64_encode, base64_decode */
 
 static const unsigned char *
 algo_hex_lower (Filter *filter,

@@ -1,0 +1,8 @@
+*.d
+*.lo
+*.o
+.libs
+algorithms.c
+core
+datafilter.dll
+liblua-datafilter.la

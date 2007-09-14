@@ -1,5 +1,5 @@
 require "datafilter-test"
-local Filter = require "data.filter"
+local Filter = require "datafilter"
 local testcase = TestCase("Algorithms uri_decode and uri_encode")
 
 local default_charset_mapping

@@ -387,7 +387,7 @@ filter_new (lua_State *L) {
                   "invalid algorithm name");
 
     if (num_args > 4)
-        return luaL_error(L, "too many arguments to data.filter:new()");
+        return luaL_error(L, "too many arguments to datafilter:new()");
 
     /* Find the definition of the named algorithm. */
     def = filter_algorithms;
@@ -647,7 +647,7 @@ filter_gc (lua_State *L) {
 }
 
 int
-luaopen_data_filter (lua_State *L) {
+luaopen_datafilter (lua_State *L) {
     size_t i;
     const AlgorithmDefinition *def;
 
@@ -656,7 +656,7 @@ luaopen_data_filter (lua_State *L) {
     lua_createtable(L, 0, NUM_ALGO_DEFS + 3);
 
     lua_pushlstring(L, "_MODULE_NAME", 12);
-    lua_pushlstring(L, "data.filter", 11);
+    lua_pushlstring(L, "datafilter", 11);
     lua_rawset(L, -3);
     lua_pushlstring(L, "_VERSION", 8);
     lua_pushstring(L, VERSION);
@@ -676,7 +676,7 @@ luaopen_data_filter (lua_State *L) {
     /* Create the metatable for Filter objects returned from Filter:new() */
     luaL_newmetatable(L, FILTER_MT_NAME);
     lua_pushlstring(L, "_MODULE_NAME", 12);
-    lua_pushlstring(L, "TODO", 4);
+    lua_pushlstring(L, "datafilter-object", 4);
     lua_rawset(L, -3);
     lua_pushlstring(L, "add", 3);
     lua_pushcfunction(L, filter_add);

@@ -1,5 +1,5 @@
 require "datafilter-test"
-local Filter = require "data.filter"
+local Filter = require "datafilter"
 local testcase = TestCase("Test 'addfile' method")
 
 function testcase:test_from_file ()

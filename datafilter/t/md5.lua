@@ -1,5 +1,5 @@
 require "datafilter-test"
-local Filter = require "data.filter"
+local Filter = require "datafilter"
 local testcase = TestCase("Algorithm md5")
 
 local misc_mapping, progressive_md5_expected

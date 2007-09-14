@@ -1,4 +1,4 @@
-/* data.filter algorithm: sha1
+/* lua-datafilter algorithm: sha1
  */
 
 #include <stdint.h>

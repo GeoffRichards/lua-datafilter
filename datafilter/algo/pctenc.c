@@ -1,4 +1,4 @@
-/* data.filter algorithms: percent_encode, percent_decode */
+/* lua-datafilter algorithms: percent_encode, percent_decode */
 
 /* This is the set of 'unreserved' byte values from RFC 3986. */
 static const unsigned char

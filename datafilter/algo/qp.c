@@ -1,4 +1,4 @@
-/* data.filter algorithms: qp_decode, qp_encode
+/* lua-datafilter algorithms: qp_decode, qp_encode
  */
 
 /* QP input shouldn't have more than 76 characters per line, so we can

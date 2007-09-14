@@ -1,5 +1,5 @@
 require "datafilter-test"
-local Filter = require "data.filter"
+local Filter = require "datafilter"
 local testcase = TestCase("Algorithms base64_decode and base64_encode")
 
 local misc_mapping, single_byte_mapping, bad_char_encodings

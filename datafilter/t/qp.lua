@@ -1,5 +1,5 @@
 require "datafilter-test"
-local Filter = require "data.filter"
+local Filter = require "datafilter"
 local testcase = TestCase("Algorithms qp_decode and qp_encode")
 
 local mapping_both_ways, mapping_encoded_to_decoded

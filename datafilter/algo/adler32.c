@@ -1,5 +1,4 @@
-/* data.filter algorithm: adler32
- */
+/* lua-datafilter algorithm: adler32 */
 
 typedef struct Adler32State_ {
     unsigned int s1, s2;

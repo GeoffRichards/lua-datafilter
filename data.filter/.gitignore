@@ -1,8 +1,0 @@
-*.d
-*.lo
-*.o
-.libs
-algorithms.c
-core
-data.filter.dll
-liblua-data.filter.la

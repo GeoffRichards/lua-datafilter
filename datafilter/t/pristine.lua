@@ -5,7 +5,7 @@ function testcase:test_no_global_clobbering ()
     local globals = {}
     for key in pairs(_G) do globals[key] = true end
 
-    local lib = require "data.filter"
+    local lib = require "datafilter"
 
     for key in pairs(_G) do
         lunit.assert_not_nil(globals[key],

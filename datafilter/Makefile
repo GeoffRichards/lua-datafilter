@@ -1,4 +1,4 @@
-PACKAGE=Lua-Data-Filter
+PACKAGE=Lua-DataFilter
 VERSION=$(shell head -1 Changes | sed 's/ .*//')
 RELEASEDATE=$(shell head -1 Changes | sed 's/.* //')
 PREFIX=/usr/local
@@ -33,7 +33,7 @@ DEBUG := -g
 #DEBUG := $(DEBUG) -pg
 #DEBUG := $(DEBUG) -fprofile-arcs -ftest-coverage
 
-all: liblua-data.filter.la
+all: liblua-datafilter.la
 
 # This is for building the Windows DLL for the module.  You might have to
 # tweak the location of the MingW32 compiler and the Lua library and include
@@ -45,10 +45,10 @@ WIN32CFLAGS := -O2 -I/usr/i586-mingw32msvc/include -Iinclude \
                -DVERSION=\"$(VERSION)\"
 WIN32LDFLAGS := -L. -llua5.1 -L/usr/i586-mingw32msvc/lib \
                 --no-undefined --enable-runtime-pseudo-reloc
-win32bin: data.filter.dll
-data.filter.o: filter.c filter.h algo/*.c algorithms.c
+win32bin: datafilter.dll
+filter.win32.o: filter.c filter.h algo/*.c algorithms.c
 	$(WIN32CC) $(DEBUG) $(WIN32CFLAGS) -c -o $@ $<
-data.filter.dll: data.filter.o
+datafilter.dll: filter.win32.o
 	$(WIN32CC) $(DEBUG) -O -Wl,-S -shared -o $@ $< $(WIN32LDFLAGS)
 
 doc/lua-TODO.3: doc/TODO.pod
@@ -91,7 +91,7 @@ dist: all
 %.lo: %.c
 	@echo 'CC>' $@
 	@$(LIBTOOL) --mode=compile $(CC) $(CFLAGS) $(DEBUG) -c -o $@ $<
-liblua-data.filter.la: filter.lo
+liblua-datafilter.la: filter.lo
 	@echo 'LD>' $@
 	@$(LIBTOOL) --mode=link $(CC) $(LDFLAGS) $(DEBUG) -o $@ $< -rpath $(LIBDIR)
 
@@ -101,12 +101,12 @@ algorithms.c: algorithms.txt algorithms.pl
 
 clean:
 	rm -f *.o *.lo *.d core
-	[ -f .libs/liblua-data.filter.lai ] && \
-	    source .libs/liblua-data.filter.lai && \
+	[ -f .libs/liblua-datafilter.lai ] && \
+	    source .libs/liblua-datafilter.lai && \
 	    linkname=$$(echo $$library_names | sed 's/.* //') ; \
 	    rm -f $$linkname
-	rm -f data.filter.o data.filter.dll
-	rm -rf liblua-data.filter.la .libs
+	rm -f filter.win32.o datafilter.dll
+	rm -rf liblua-datafilter.la .libs
 	rm -f doc/lua-TODO.3
 	rm -f gmon.out *.bb t/*.bb *.bbg t/*.bbg *.da t/*.da *.gcov t/*.gcov
 realclean: clean

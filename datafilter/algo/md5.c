@@ -1,10 +1,10 @@
-/* data.filter algorithm: md5
+/* lua-datafilter algorithm: md5
  *
  * The MD5 implementation in this file is derived from the one in the
  * Lua-MD5 library from the Kepler project.  It was originally written by
  * Roberto Ierusalimschy and Marcela Ozro Suarez, and is
  * Copyright (c) 2003-2007 PUC-Rio.
- * This version has been adapted to work within the data.filter architecture,
+ * This version has been adapted to work within the data-filter architecture,
  * but is released under the same license, that of Lua 5.0.
  */
 
