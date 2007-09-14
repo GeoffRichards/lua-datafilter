@@ -25,13 +25,6 @@ qp_output_whitespace (Filter *filter,
     return in;
 }
 
-#define my_ishex(c) (((c) >= 48 && (c) <= 57) || \
-                     ((c) >= 65 && (c) <= 70) || \
-                     ((c) >= 97 && (c) <= 102))
-#define hex_digit_val(c) ((c) >= 48 && (c) <= 57 ? ((c) - 48) \
-                        : (c) >= 65 && (c) <= 70 ? ((c) - 55) \
-                                                 : ((c) - 87))
-
 static const unsigned char *
 algo_qp_decode (Filter *filter,
                 const unsigned char *in, const unsigned char *in_end,

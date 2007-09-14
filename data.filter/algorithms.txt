@@ -5,6 +5,8 @@ base64_encode	Base64Encode		1
 hex_lower	-			0
 hex_upper	-			0
 md5		MD5			0
+percent_decode	-			0
+percent_encode	PercentEncode		0
 qp_decode	-			0
 qp_encode	QPEncode		1
 sha1		SHA1			0

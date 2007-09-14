@@ -53,6 +53,13 @@ static const unsigned char default_line_ending[] = { 13, 10 };
 
 #define EMAIL_MAX_LINE_LENGTH 76
 
+#define my_ishex(c) (((c) >= 48 && (c) <= 57) || \
+                     ((c) >= 65 && (c) <= 70) || \
+                     ((c) >= 97 && (c) <= 102))
+#define hex_digit_val(c) ((c) >= 48 && (c) <= 57 ? ((c) - 48) \
+                        : (c) >= 65 && (c) <= 70 ? ((c) - 55) \
+                                                 : ((c) - 87))
+
 static const unsigned char
 hex_char_codes_lower[16] = {
     48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 97, 98, 99, 100, 101, 102
@@ -328,6 +335,7 @@ algo_wrapper (lua_State *L, const AlgorithmDefinition *def) {
 
 #include "algo/base64.c"
 #include "algo/qp.c"
+#include "algo/pctenc.c"
 #include "algo/md5.c"
 #include "algo/sha1.c"
 #include "algo/adler32.c"
