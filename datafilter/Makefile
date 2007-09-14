@@ -51,10 +51,16 @@ filter.win32.o: filter.c filter.h algo/*.c algorithms.c
 datafilter.dll: filter.win32.o
 	$(WIN32CC) $(DEBUG) -O -Wl,-S -shared -o $@ $< $(WIN32LDFLAGS)
 
+manpages: doc/lua-datafilter.3 doc/lua-datafilter-base64.3
 doc/lua-datafilter.3: doc/lua-datafilter.pod
-	sed 's/E<copy>/(c)/g' <$< | \
+	sed 's/E<copy>/(c)/g' <$< | sed 's/E<ndash>/-/g' | \
 	    pod2man --center="Lua module for munging data" \
 	            --name="LUA-DATAFILTER" --section=3 \
+	            --release="$(VERSION)" --date="$(RELEASEDATE)" >$@
+doc/lua-datafilter-base64.3: doc/lua-datafilter-base64.pod
+	sed 's/E<copy>/(c)/g' <$< | sed 's/E<ndash>/-/g' | \
+	    pod2man --center="Base64 algorithms for Lua" \
+	            --name="LUA-DATAFILTER-BASE64" --section=3 \
 	            --release="$(VERSION)" --date="$(RELEASEDATE)" >$@
 
 test: all

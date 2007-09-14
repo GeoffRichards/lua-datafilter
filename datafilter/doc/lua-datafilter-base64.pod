@@ -1,0 +1,94 @@
+=head1 Name
+
+base64_encode and base64_decode - DataFilter algorithms for Base64 encoding
+and decoding
+
+=head1 Overview
+
+These two algorithms are part of the Lua-DataFilter package.  See the
+overview documentation in L<lua-datafilter(3)> for information about how
+to use them.
+
+=head1 Default behaviour of C<base64_encode>
+
+C<base64_encode> will produce a continuous stream of US-ASCII characters
+encoding the input data as Base64, using the standard alphabet (the uppercase
+letters C<A>E<ndash>C<Z>, the lowercase letters C<a>E<ndash>C<z>, the digits
+C<0>E<ndash>C<9>, and the C<characters C<+>> S<and C</>>).
+
+There will be no line breaks in the output, even at the end.
+
+Padding C<=> characters will be added at the end of the output if necessary
+to make it a multiple S<4 characters> long.
+
+=head1 Options for C<base64_encode>
+
+The following options are available to modify the default behaviour:
+
+=over
+
+=item include_padding
+
+This is C<true> by default, but setting it to C<false> will cause the
+S<padding C<=>> characters not to be put on the end of the output.
+
+=item line_ending
+
+This should be a string.  If supplied it will be added to the encoded
+output after a line reaches a certain length.  The default maximum line
+length is S<76 characters>, which is suitable for use in email.
+
+=item max_line_length
+
+This should be a number greater than zero.  It will cause the output to
+be broken into lines no longer than the given number of characters.  If
+the C<line_ending> option isn't given, the lines will be terminated with
+a carriage return followed by a line feed (S<characters 13> S<and 10>).
+
+=back
+
+If you want to break the encoded data into lines, setting either of
+C<line_ending> or C<max_line_length> is sufficient.  A line break will
+be added at the end of the file however long the last line is.
+
+=head1 Default behaviour of C<base64_decode>
+
+Whitespace characters will be ignored on input, but any other characters
+not in the standard Base64 alphabet will cause an exception to be thrown.
+
+If the number of padding C<=> characters found at the end of the input
+is not correct, then an exception will be thrown.
+
+Errors are always produced if padding C<=> characters occur anywhere but
+at the end of the input (not including whitespace), or if the last character
+of input contains bits set which should just be padding bits, or if there
+is a final block of only one character (which isn't enough to encode a byte
+of output).
+
+=head1 Options for C<base64_decode>
+
+The following options are available to modify the default behaviour:
+
+=over
+
+=item allow_whitespace
+
+Set this to C<false> to cause an exception to be thrown if any whitespace
+characters are found in the input.
+
+=item allow_invalid_characters
+
+Set this to C<false> to prevent errors from input containing characters
+outside the Base64 alphabet.  They will be silently ignored.  Even with
+this setting, padding characters occurring where they shouldn't will
+still cause an error.
+
+=item allow_missing_padding
+
+Setting this to C<true> will silence the error which would normally
+be produced if the padding C<=> characters are missing from the input.
+
+=back
+
+=for comment
+vi:ts=4 sw=4 expandtab

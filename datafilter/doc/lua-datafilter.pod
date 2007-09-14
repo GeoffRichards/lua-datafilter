@@ -205,6 +205,9 @@ the C<:new()> method when using the OO interface.
 
 =item base64_decode, base64_encode
 
+Encode binary data as text using the Base64 given in S<RFC 4648>.
+See L<lua-datafilter-base64(3)> for options.
+
 =item hex_lower, hex_upper
 
 =item percent_decode, percent_encode
@@ -214,25 +217,44 @@ the C<:new()> method when using the OO interface.
 =back
 
 There are also the following message digest, or hashing algorithms, which
-all behave in the same basic way:
+all behave in the same basic way.  None of them take any options, and they
+all produce a small amount of binary output.  None of them produce any
+output until all the input data has been read.  Usually, you'll want to
+feed the output into the C<base64_encode> or C<hex_lower> algorithm to
+get a human-readable result.
 
 =over
 
 =item adler32
 
+Returns a 4 byte checksum.  The algorithm is given in S<RFC 1950>.
+
 =item md5
+
+Returns a 16 byte message digest using the algorithm from C<RFC 1321>.
 
 =item sha1
 
+Returns a 20 byte message digest using the algorithm from C<RFC 3174>.
+
 =back
+
+Currently all the message digest algorithms are limited to input which is
+a multiple of 8 bits long (that is, you can only feed in bytes, not bits).
 
 =head1 Copyright
 
 This software and documentation is Copyright E<copy> 2007 Geoff Richards
 E<lt>geoff@laxan.comE<gt>.  It is free software; you can redistribute it
 and/or modify it under the terms of the S<Lua 5.0> license.  The full terms
-are given in the file I<COPYRIGHT> supplied with the source code package,
+are given in the file F<COPYRIGHT> supplied with the source code package,
 and are also available here: L<http://www.lua.org/license.html>
+
+The MD5 implementation was originally derived from the one in the Lua-MD5
+module from the Kepler project, which is by Roberto Ierusalimschy and
+Marcela Ozro Suarez, and Copyright E<copy> 2003E<ndash>2007 PUC-Rio.
+This version has been extensively modified to fit into the DataFilter
+architecture, so any bugs are likely my fault.
 
 =for comment
 vi:ts=4 sw=4 expandtab
