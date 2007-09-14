@@ -46,7 +46,7 @@ WIN32CFLAGS := -O2 -I/usr/i586-mingw32msvc/include -Iinclude \
 WIN32LDFLAGS := -L. -llua5.1 -L/usr/i586-mingw32msvc/lib \
                 --no-undefined --enable-runtime-pseudo-reloc
 win32bin: datafilter.dll
-filter.win32.o: filter.c filter.h algo/*.c algorithms.c
+filter.win32.o: filter.c datafilter.h algo/*.c algorithms.c
 	$(WIN32CC) $(DEBUG) $(WIN32CFLAGS) -c -o $@ $<
 datafilter.dll: filter.win32.o
 	$(WIN32CC) $(DEBUG) -O -Wl,-S -shared -o $@ $< $(WIN32LDFLAGS)

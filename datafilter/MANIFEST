@@ -14,6 +14,7 @@ algorithms.c
 algorithms.pl
 algorithms.txt
 datafilter-test.lua
+datafilter.h
 doc/lua-datafilter-base64.3
 doc/lua-datafilter-base64.pod
 doc/lua-datafilter-pctenc.3
@@ -23,7 +24,6 @@ doc/lua-datafilter-qp.pod
 doc/lua-datafilter.3
 doc/lua-datafilter.pod
 filter.c
-filter.h
 lunit.lua
 t/addfile.lua
 t/adler32.lua
