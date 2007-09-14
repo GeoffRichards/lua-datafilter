@@ -4,6 +4,10 @@ RELEASEDATE=$(shell head -1 Changes | sed 's/.* //')
 PREFIX=/usr/local
 DISTNAME=$(PACKAGE)-$(VERSION)
 
+# The path to where the module's source files should be installed.
+LUA_CPATH:=$(shell pkg-config lua5.1 --define-variable=prefix=$(PREFIX) \
+                              --variable=INSTALL_CMOD)
+
 LIBDIR = $(PREFIX)/lib
 
 # Uncomment this to run the regression tests with valgrind.
@@ -77,11 +81,12 @@ test: all
 	for f in t/*.lua; do $(VALGRIND) lua $$f; done
 
 install: all
-	mkdir -p $(LUA_SPATH)
-	install --mode=644 liblua-datafilter.so.0.0.0 $(LUA_SPATH)/datafilter.so
+	mkdir -p $(LUA_CPATH)
+	install --mode=644 .libs/liblua-datafilter.so.0.0.0 $(LUA_CPATH)/datafilter.so
 	mkdir -p $(PREFIX)/share/man/man3
 	for manpage in datafilter datafilter-base64 datafilter-qp datafilter-pctenc; do \
-	    gzip -c doc/lua-$$manpage.3 >$(PREFIX)/share/man/man3/lua-$$manpage.3.gz
+	    gzip -c doc/lua-$$manpage.3 >$(PREFIX)/share/man/man3/lua-$$manpage.3.gz; \
+	done
 
 
 checktmp:
