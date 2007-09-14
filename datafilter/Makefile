@@ -51,10 +51,10 @@ filter.win32.o: filter.c filter.h algo/*.c algorithms.c
 datafilter.dll: filter.win32.o
 	$(WIN32CC) $(DEBUG) -O -Wl,-S -shared -o $@ $< $(WIN32LDFLAGS)
 
-doc/lua-TODO.3: doc/TODO.pod
+doc/lua-datafilter.3: doc/lua-datafilter.pod
 	sed 's/E<copy>/(c)/g' <$< | \
-	    pod2man --center="Lua module for parsing ISBN numbers" \
-	            --name="LUA-ISBN" --section=3 \
+	    pod2man --center="Lua module for munging data" \
+	            --name="LUA-DATAFILTER" --section=3 \
 	            --release="$(VERSION)" --date="$(RELEASEDATE)" >$@
 
 test: all
@@ -65,7 +65,7 @@ install: all
 	install --mode=644 ISBN.lua $(LUA_SPATH)/
 	install --mode=644 ISBN/_data.lua $(LUA_SPATH)/ISBN/
 	mkdir -p $(PREFIX)/share/man/man3
-	gzip -c doc/lua-isbn.3 >$(PREFIX)/share/man/man3/lua-isbn.3.gz
+	gzip -c doc/lua-datafilter.3 >$(PREFIX)/share/man/man3/lua-datafilter.3.gz
 
 
 dist: all

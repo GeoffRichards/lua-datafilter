@@ -1,0 +1,238 @@
+=head1 Name
+
+Lua-DataFilter - Lua 5.1 module for munging arbitrarily large amounts of data
+
+=head1 Overview
+
+This module provides a small selection of algorithms and a simple API for
+feeding them arbitrarily large amounts of data, and storing arbitrarily
+large amounts of output.
+
+Currently the set of algorithms is limited to those provided in the library,
+but a future version of this library will allow Lua code to provide plugins to
+add more.
+
+A complete list of the algorithms provided is given at the bottom of this
+document.  Suggestions for other algorithms which would be appropriate here
+are welcome.
+
+=head1 Loading the module
+
+The DataFilter module doesn't install itself into any global tables, so you can
+decide what name you want to use to access it.  You will probably want to
+load it like this:
+
+=for syntax-highlight lua
+
+    local Filter = require "datafilter"
+
+You can use a variable called something other than C<Filter> if you'd like,
+or you could assign the table returned by C<require> to a global variable.
+In this documentation we'll assume your using a variable called C<Filter>.
+
+=head1 The simple API (string in, string out)
+
+The most convenient way to use the algorithms is to simply call the Lua
+function provided for each one, passing in a string.  The algorithm will
+return its results as a string.
+
+=for syntax-highlight lua
+
+    print(Filter.base64_decode("Zm9vYmFy"))
+
+    print(Filter.hex_lower(Filter.md5("password")))
+
+The name of the algorithm is the name of the Lua function you can call,
+which will be provided directly in the table returned by
+C<require "datafilter">.
+
+=head1 Algorhtm options
+
+Some algorithms accept options, which you can provide as a table as the
+second argument to their functions.
+
+=for syntax-highlight lua
+
+    local options = { include_padding = true }
+    print(Filter.base64_encode("frob", options))
+    options.include_padding = false
+    print(Filter.base64_encode("frob", options))
+
+    local data = ("foobar"):rep(20)
+    print(Filter.base64_encode(data, { max_line_length = 76 }))
+
+The options you can use for each algorithm are described in its
+documentation.
+
+=head1 Processing large amounts of input
+
+If the input data might be too large to load into a string, or if you want to
+start processing data before all of it has arrived, you can create a DataFilter
+object and feed input to it in chunks.  Call C<:new> to create the object,
+passing in the name of the algorithm (which is the same as the name of the
+simple functions described above).  Use the C<add> method to feed it the
+contents of a string, and C<addfile> to feed in a whole file.
+
+When you're finished adding input, the output is available as a string
+from the C<result> method.  You can call C<result> more than once if
+necessary, and it will return the same string each time, but once you've
+called it the processing is finished, so you can't add more input.
+
+=for syntax-highlight lua
+
+    local obj = Filter:new("md5")
+
+    obj:add("string data")
+    obj:add("more string data")
+
+    obj:addfile("filename")
+
+    print(Filter.hex_lower(obj:result()))
+
+The C<addfile> method can take a filename or a Lua file handle which has
+already been opened for reading.  If it's a file handle, it will be read
+until there is no more data.  The DataFilter object won't close the file
+for you.
+
+=for syntax-highlight lua
+
+    local obj = Filter:new("md5")
+
+    local fh = assert(io.open("filename", "rb"))
+    obj:addfile(fh)
+    fh:close()
+
+    print(Filter.hex_lower(obj:result()))
+
+A file handle given to C<addfile> can actually be any object which has a
+C<read> method, so you can create custom objects which emulate file handles.
+The C<read> method will be the only thing called by C<addfile>.  It will only
+be called with a number, which indicates the maximum number of bytes it
+should return.  The method should always return one of the following:
+
+=over
+
+=item data
+
+A string, no longer than the number specified.
+
+=item nil
+
+Indicates end of file.  The C<read> method won't be called anymore after
+it returns this.
+
+=item nil, error-message
+
+The error message should be a string.  This will cause C<addfile> to throw
+an exception using the message.
+
+=back
+
+=head1 Producing large amounts of output
+
+Just as you can use the object-oriented interface to provide arbitrary
+amounts of input data, you can also send data to an output stream to
+cope with arbitrary amounts of it.  The simplest kind of output stream
+is just a filename, which will be written to whenever the object has
+more output to send.
+
+The output stream is always the second argument to C<:new()>, after the
+name of the algorithm.
+
+=for syntax-highlight lua
+
+    local obj = Filter:new("base64_encode", "output-filename")
+
+    obj:add("input string\n")
+    obj:addfile("input-filename")
+
+    obj:finish()
+
+The C<finish> method indicates that all the input data has now been provided,
+and causes all the remaining output to be sent.  After that the output file
+will be closed.  You can't add more input after calling C<finish>.  The
+C<finish> method will be called automatically when the object is garbage
+collected, but it's usually a good idea to call it explicitly, because it
+may take some time before the garbage collector gets round to collecting
+the object.
+
+You can use a file handle as an output stream instead of a filename, and
+the file handle can also be an object which emulates a Lua file handle.
+In that case it must be an object (table or userdata) which has a C<write>
+method.  This method will be called with a string each time more data is
+ready.
+
+Finally, the output stream can be a Lua function.  This will be called
+directly with a string when output is ready to be sent.
+
+=for syntax-highlight lua
+
+    local function output_callback (str)
+        print("more output: " .. str)
+    end
+
+    local obj = Filter:new("base64_encode", output_callback)
+    obj:add("input string\n")
+    obj:finish()
+
+=head1 Passing options to the OO API
+
+If you're using the object-oriented interface to DataFilter, you can still
+pass a table of options to the algorithm you're using when you call the
+constructor:
+
+=for syntax-highlight lua
+
+    local obj = Filter:new("base64_encode", "output-filename",
+                           { max_line_length = 76 })
+
+    obj:add("input string\n")
+    bj:addfile("input-filename")
+
+    obj:finish()
+
+If you want to provide options, but not an output stream, you can just
+give C<nil> as the second argument.
+
+=head1 Algorithms
+
+These are the names of the algorithms provided by the DataFilter package
+at this time.  Each name can be called in the ways described above, either
+as a simple function in the table returned by C<require>, or passed to
+the C<:new()> method when using the OO interface.
+
+=over
+
+=item base64_decode, base64_encode
+
+=item hex_lower, hex_upper
+
+=item percent_decode, percent_encode
+
+=item qp_decode, qp_encode
+
+=back
+
+There are also the following message digest, or hashing algorithms, which
+all behave in the same basic way:
+
+=over
+
+=item adler32
+
+=item md5
+
+=item sha1
+
+=back
+
+=head1 Copyright
+
+This software and documentation is Copyright E<copy> 2007 Geoff Richards
+E<lt>geoff@laxan.comE<gt>.  It is free software; you can redistribute it
+and/or modify it under the terms of the S<Lua 5.0> license.  The full terms
+are given in the file I<COPYRIGHT> supplied with the source code package,
+and are also available here: L<http://www.lua.org/license.html>
+
+=for comment
+vi:ts=4 sw=4 expandtab
