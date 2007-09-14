@@ -1,4 +1,4 @@
-require "lunit"
+require "datafilter-test"
 local testcase = lunit.TestCase("Test library loading doesn't affect globals")
 
 function testcase:test_no_global_clobbering ()

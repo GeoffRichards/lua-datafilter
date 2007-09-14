@@ -101,10 +101,6 @@ algorithms.c: algorithms.txt algorithms.pl
 
 clean:
 	rm -f *.o *.lo *.d core
-	[ -f .libs/liblua-datafilter.lai ] && \
-	    source .libs/liblua-datafilter.lai && \
-	    linkname=$$(echo $$library_names | sed 's/.* //') ; \
-	    rm -f $$linkname
 	rm -f filter.win32.o datafilter.dll
 	rm -rf liblua-datafilter.la .libs
 	rm -f doc/lua-TODO.3
