@@ -21,24 +21,35 @@ CFLAGS := -ansi -pedantic -Wall -W -Wshadow -Wpointer-arith \
           -DVERSION=\"$(VERSION)\"
 LDFLAGS := $(shell pkg-config --libs lua5.1)
 
-# Uncomment these lines to enable optimization.  Comment them out when running
+# Uncomment this line to enable optimization.  Comment it out when running
 # the test suite because it makes the assert() errors clearer and avoids
 # warnings about ridiculously long string constants with some versions of gcc.
 #CFLAGS := $(CFLAGS) -O3 -fomit-frame-pointer
-#LDFLAGS := $(LDFLAGS)
 
-# Uncomment these lines to enable debugging.
-CFLAGS := $(CFLAGS) -g
-LDFLAGS := $(LDFLAGS) -g
+# Uncomment this line to enable debugging.
+DEBUG := -g
 
-# Uncomment one of these pairs of lines to enable profiling and/or gcov
-# coverage testing.
-#CFLAGS := $(CFLAGS) -pg
-#LDFLAGS := $(LDFLAGS) -pg
-#CFLAGS := $(CFLAGS) -fprofile-arcs -ftest-coverage
-#LDFLAGS := $(LDFLAGS) -fprofile-arcs -ftest-coverage
+# Uncomment one of these lines to enable profiling and/or gcov coverage testing.
+#DEBUG := $(DEBUG) -pg
+#DEBUG := $(DEBUG) -fprofile-arcs -ftest-coverage
 
 all: liblua-data.filter.la
+
+# This is for building the Windows DLL for the module.  You might have to
+# tweak the location of the MingW32 compiler and the Lua library and include
+# files to get it to work.  The defaults here are set up for the Lua libraries
+# to be unpacked in the current directory, and to compile on Debian Linux
+# with the Windows cross compiler from the 'mingw32' package.
+WIN32CC = /usr/bin/i586-mingw32msvc-cc
+WIN32CFLAGS := -O2 -I/usr/i586-mingw32msvc/include -Iinclude \
+               -DVERSION=\"$(VERSION)\"
+WIN32LDFLAGS := -L. -llua5.1 -L/usr/i586-mingw32msvc/lib \
+                --no-undefined --enable-runtime-pseudo-reloc
+win32bin: data.filter.dll
+data.filter.o: filter.c filter.h algo/*.c algorithms.c
+	$(WIN32CC) $(DEBUG) $(WIN32CFLAGS) -c -o $@ $<
+data.filter.dll: data.filter.o
+	$(WIN32CC) $(DEBUG) -O -Wl,-S -shared -o $@ $< $(WIN32LDFLAGS)
 
 doc/lua-TODO.3: doc/TODO.pod
 	sed 's/E<copy>/(c)/g' <$< | \
@@ -79,10 +90,10 @@ dist: all
 
 %.lo: %.c
 	@echo 'CC>' $@
-	@$(LIBTOOL) --mode=compile $(CC) $(CFLAGS) -c -o $@ $<
+	@$(LIBTOOL) --mode=compile $(CC) $(CFLAGS) $(DEBUG) -c -o $@ $<
 liblua-data.filter.la: filter.lo
 	@echo 'LD>' $@
-	@$(LIBTOOL) --mode=link $(CC) $(LDFLAGS) -o $@ $< -rpath $(LIBDIR)
+	@$(LIBTOOL) --mode=link $(CC) $(LDFLAGS) $(DEBUG) -o $@ $< -rpath $(LIBDIR)
 
 filter.lo: algorithms.c
 algorithms.c: algorithms.txt algorithms.pl
@@ -90,13 +101,15 @@ algorithms.c: algorithms.txt algorithms.pl
 
 clean:
 	rm -f *.o *.lo *.d core
-	source .libs/liblua-data.filter.lai && \
+	[ -f .libs/liblua-data.filter.lai ] && \
+	    source .libs/liblua-data.filter.lai && \
 	    linkname=$$(echo $$library_names | sed 's/.* //') ; \
 	    rm -f $$linkname
+	rm -f data.filter.o data.filter.dll
 	rm -rf liblua-data.filter.la .libs
 	rm -f doc/lua-TODO.3
 	rm -f gmon.out *.bb t/*.bb *.bbg t/*.bbg *.da t/*.da *.gcov t/*.gcov
 realclean: clean
-	rm -f enctables.c
+	rm -f algorithms.c
 
-.PHONY: all test install dist clean realclean
+.PHONY: all win32bin test install dist clean realclean
