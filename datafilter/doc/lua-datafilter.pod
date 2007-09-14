@@ -206,13 +206,26 @@ the C<:new()> method when using the OO interface.
 =item base64_decode, base64_encode
 
 Encode binary data as text using the Base64 given in S<RFC 4648>.
-See L<lua-datafilter-base64(3)> for options.
+See L<lua-datafilter-base64(3)> for details and available options.
 
 =item hex_lower, hex_upper
 
+Binary input data is encoded as a series of hexadecimal digits, using
+either lowercase or uppercase letters for the S<digits 10E<ndash>15>.
+These algorithms don't have any options, and there isn't any input they
+consider to be invalid.
+
 =item percent_decode, percent_encode
 
+Do percent encoding and decoding as defined by S<RFC 3986>.  This is
+also often known as 'URI encoding' or 'URI escaping'.
+See L<lua-datafilter-pctenc(3)> for details and available options.
+
 =item qp_decode, qp_encode
+
+Encode text using the quoted-printable encoding defined in S<RFC 2045>,
+to make it safe for transit through baroque email systems.
+See L<lua-datafilter-qp(3)> for details and available options.
 
 =back
 
@@ -231,11 +244,11 @@ Returns a 4 byte checksum.  The algorithm is given in S<RFC 1950>.
 
 =item md5
 
-Returns a 16 byte message digest using the algorithm from C<RFC 1321>.
+Returns a 16 byte message digest using the algorithm from S<RFC 1321>.
 
 =item sha1
 
-Returns a 20 byte message digest using the algorithm from C<RFC 3174>.
+Returns a 20 byte message digest using the algorithm from S<RFC 3174>.
 
 =back
 

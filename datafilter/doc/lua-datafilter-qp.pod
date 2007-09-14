@@ -1,0 +1,46 @@
+=head1 Name
+
+qp_encode and qp_decode - DataFilter algorithms for quoted-printable encoding
+and decoding
+
+=head1 Overview
+
+These two algorithms are part of the Lua-DataFilter package.  See the
+overview documentation in L<lua-datafilter(3)> for information about how
+to use them.
+
+B<Warning>: these implementations of quoted printable encoding are not
+safe to use for binary encoding.  Currently they will normalize line ending
+characters in a way which could corrupt binary data, although they should
+be perfectly suitable for processing text.  This is likely to get fixed in
+the future, but at that point the default treatment of line endings may
+change.
+
+=head1 Default behaviour of C<qp_encode>
+
+C<qp_encode> will escape certain characters using C<=> characters.  It
+will also break the output into lines of no more than 76 characters in
+length, using soft line breaks (C<=> at the end of a line) to avoid
+introducing new hard line breaks (so when you decode the encoded text you
+won't get extra line breaks in it).
+
+Line breaks, both real ones and soft ones, will be output as a carriage
+return followed by a line feed (US-ASCII characters 13 and 10).
+
+=head1 Options for C<qp_encode>
+
+The C<line_ending> option, if provided, should be a string.  It will be
+used as the line ending, both for hard and soft line breaks, instead of
+the default carriage return linefeed sequence.  An empty string value
+will prevent anything being produced at the ends of lines.
+
+=head1 Default behaviour of C<qp_decode>
+
+This will reverse the encoding of characters performed by
+C<qp_encode>, and remove soft line breaks.  The real line endings in
+the input will be normalized to linefeed characters.
+
+C<qp_decode> currently doesn't accept any options.
+
+=for comment
+vi:ts=4 sw=4 expandtab

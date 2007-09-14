@@ -1,2 +1,4 @@
-lua-datafilter.3
 lua-datafilter-base64.3
+lua-datafilter-pctenc.3
+lua-datafilter-qp.3
+lua-datafilter.3
