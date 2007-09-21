@@ -53,7 +53,7 @@ end
 
 function testcase:test_output_filename_write_error ()
     assert_error("trying to write to a directory",
-                 function () Filter:new("base64_encode", "t") end)
+                 function () Filter:new("base64_encode", "test") end)
 end
 
 function testcase:test_output_file_handle ()
@@ -165,7 +165,7 @@ function testcase:test_bad_usage ()
     assert_error("invalid output file name",
                  function () Filter:new("md5", "tmpname\0foo") end)
     assert_error("error opening output file",
-                 function () Filter:new("md5", "t") end)
+                 function () Filter:new("md5", "test") end)
 
     local obj = Filter:new("md5", function () end)
     obj:add("foo")

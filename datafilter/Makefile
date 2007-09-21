@@ -78,7 +78,7 @@ doc/lua-datafilter-qp.3: doc/lua-datafilter-qp.pod
 	            --release="$(VERSION)" --date="$(RELEASEDATE)" >$@
 
 test: all
-	for f in t/*.lua; do $(VALGRIND) lua $$f; done
+	for f in test/*.lua; do $(VALGRIND) lua $$f; done
 
 install: all
 	mkdir -p $(LUA_CPATH)
@@ -131,9 +131,9 @@ clean:
 	rm -f *.o *.lo *.d core
 	rm -f filter.win32.o datafilter.dll
 	rm -rf liblua-datafilter.la .libs
-	rm -f doc/lua-TODO.3
-	rm -f gmon.out *.bb t/*.bb *.bbg t/*.bbg *.da t/*.da *.gcov t/*.gcov
+	rm -f gmon.out *.bb *.bbg *.da *.gcov
 realclean: clean
 	rm -f algorithms.c
+	rm -f doc/lua-datafilter*.3
 
 .PHONY: all win32bin test install checktmp dist win32dist clean realclean

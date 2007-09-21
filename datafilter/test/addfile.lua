@@ -4,20 +4,20 @@ local testcase = TestCase("Test 'addfile' method")
 
 function testcase:test_from_file ()
     local obj = Filter:new("md5")
-    obj:addfile("t/data/random1.dat")
+    obj:addfile("test/data/random1.dat")
     is("a3f8e5cf50de466c81117093acace63a", bytes_to_hex(obj:result()),
        "addfile() on random1.dat")
 
     obj = Filter:new("md5")
-    obj:addfile("t/data/random1.dat")
-    obj:addfile("t/data/random1.dat")
+    obj:addfile("test/data/random1.dat")
+    obj:addfile("test/data/random1.dat")
     is("b9054bf8fd1941b722ec172efdb7015e", bytes_to_hex(obj:result()),
        "addfile() on random1.dat * 2")
 
     obj = Filter:new("md5")
-    obj:addfile("t/data/random1.dat")
-    obj:addfile("t/data/random1.dat")
-    obj:addfile("t/data/random1.dat")
+    obj:addfile("test/data/random1.dat")
+    obj:addfile("test/data/random1.dat")
+    obj:addfile("test/data/random1.dat")
     is("b4950de76365266129ccad54c814fddc", bytes_to_hex(obj:result()),
        "addfile() on random1.dat * 3")
 end
@@ -25,9 +25,9 @@ end
 function testcase:test_mix_add_and_addfile ()
     local obj = Filter:new("md5")
     obj:add("string before the file")
-    obj:addfile("t/data/random1.dat")
+    obj:addfile("test/data/random1.dat")
     obj:add("another string between two copies of the random chunk of data")
-    obj:addfile("t/data/random1.dat")
+    obj:addfile("test/data/random1.dat")
     obj:add("some stuff at the end, and this nul should be included: \0")
     is("ef988d269b28ab947437648d63d68a56", bytes_to_hex(obj:result()),
        "addfile() on random1.dat * 2 with strings mixed in")
@@ -35,13 +35,13 @@ end
 
 function testcase:test_add_from_lua_filehandle ()
     local obj = Filter:new("md5")
-    local fh = io.open("t/data/random1.dat", "rb")
+    local fh = io.open("test/data/random1.dat", "rb")
     obj:addfile(fh)
     fh:close()
     is("a3f8e5cf50de466c81117093acace63a", bytes_to_hex(obj:result()))
 
     obj = Filter:new("md5")
-    fh = io.open("t/data/random1.dat", "rb")
+    fh = io.open("test/data/random1.dat", "rb")
     obj:addfile(fh)
     obj:addfile(fh)     -- no effect, data already used up
     is("a3f8e5cf50de466c81117093acace63a", bytes_to_hex(obj:result()))
@@ -50,7 +50,7 @@ end
 
 function testcase:test_add_from_bad_lua_filehandle ()
     local obj = Filter:new("md5")
-    local fh = io.open("t/data/random1.dat", "rb")
+    local fh = io.open("test/data/random1.dat", "rb")
     fh:close()
     assert_error("filehandle close", function () obj:addfile(fh) end)
 end
@@ -135,7 +135,7 @@ function testcase:test_bad_usage ()
     assert_error("invalid input file name",
                  function () obj:addfile("COPYRIGHT\0foo") end)
     assert_error("error opening/reading input file",
-                 function () obj:addfile("t") end)
+                 function () obj:addfile("test") end)
 
     obj = Filter:new("md5")
     obj:add("foo")
