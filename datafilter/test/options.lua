@@ -2,6 +2,12 @@ require "datafilter-test"
 local Filter = require "datafilter"
 local testcase = TestCase("Option passing protocols")
 
+function testcase:test_module_metadata ()
+    is("string", type(Filter._VERSION))
+    assert(Filter._VERSION:len() > 0)
+    is("datafilter", Filter._NAME)
+end
+
 function testcase:test_ignored_options_simple ()
     local input = "foo"
     local expected = "acbd18db4cc2f85cedef654fccc4a4d8"

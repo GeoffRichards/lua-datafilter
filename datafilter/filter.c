@@ -652,13 +652,13 @@ luaopen_datafilter (lua_State *L) {
     const AlgorithmDefinition *def;
 
     /* Reserve space for the simple algorithm functions (one per algo), and:
-     *  _MODULE_NAME, _VERSION, .new() */
+     *  _NAME, _VERSION, .new() */
     lua_createtable(L, 0, NUM_ALGO_DEFS + 3);
 
-    lua_pushlstring(L, "_MODULE_NAME", 12);
-    lua_pushlstring(L, "datafilter", 11);
+    lua_pushstring(L, "_NAME");
+    lua_pushstring(L, "datafilter");
     lua_rawset(L, -3);
-    lua_pushlstring(L, "_VERSION", 8);
+    lua_pushstring(L, "_VERSION");
     lua_pushstring(L, VERSION);
     lua_rawset(L, -3);
 
@@ -669,31 +669,31 @@ luaopen_datafilter (lua_State *L) {
         lua_rawset(L, -3);
     }
 
-    lua_pushlstring(L, "new", 3);
+    lua_pushstring(L, "new");
     lua_pushcfunction(L, filter_new);
     lua_rawset(L, -3);
 
     /* Create the metatable for Filter objects returned from Filter:new() */
     luaL_newmetatable(L, FILTER_MT_NAME);
-    lua_pushlstring(L, "_MODULE_NAME", 12);
-    lua_pushlstring(L, "datafilter-object", 4);
+    lua_pushstring(L, "_NAME");
+    lua_pushstring(L, "datafilter-object");
     lua_rawset(L, -3);
-    lua_pushlstring(L, "add", 3);
+    lua_pushstring(L, "add");
     lua_pushcfunction(L, filter_add);
     lua_rawset(L, -3);
-    lua_pushlstring(L, "addfile", 7);
+    lua_pushstring(L, "addfile");
     lua_pushcfunction(L, filter_addfile);
     lua_rawset(L, -3);
-    lua_pushlstring(L, "result", 6);
+    lua_pushstring(L, "result");
     lua_pushcfunction(L, filter_result);
     lua_rawset(L, -3);
-    lua_pushlstring(L, "finish", 6);
+    lua_pushstring(L, "finish");
     lua_pushcfunction(L, filter_finish);
     lua_rawset(L, -3);
-    lua_pushlstring(L, "__gc", 4);
+    lua_pushstring(L, "__gc");
     lua_pushcfunction(L, filter_gc);
     lua_rawset(L, -3);
-    lua_pushlstring(L, "__index", 7);
+    lua_pushstring(L, "__index");
     lua_pushvalue(L, -2);
     lua_rawset(L, -3);
     lua_pop(L, 1);
