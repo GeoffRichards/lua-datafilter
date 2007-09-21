@@ -27,4 +27,4 @@ function bytes_to_hex (s)
     return hex
 end
 
--- vim:ts=4 sw=4 expandtab filetype=lua
+-- vi:ts=4 sw=4 expandtab
