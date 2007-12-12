@@ -105,7 +105,7 @@ win32dist: win32bin checktmp
 	rm -f $(DISTNAME).win32.zip
 	cp datafilter.dll tmp/$(DISTNAME).win32/
 	cp README.win32bin tmp/$(DISTNAME).win32/README
-	cd tmp && zip -q -r ../$(DISTNAME).win32.zip $(DISTNAME).win32
+	cd tmp && zip -q -r -9 ../$(DISTNAME).win32.zip $(DISTNAME).win32
 	rm -rf tmp
 
 
@@ -136,4 +136,4 @@ realclean: clean
 	rm -f algorithms.c
 	rm -f doc/lua-datafilter*.3
 
-.PHONY: all win32bin test install checktmp dist win32dist clean realclean
+.PHONY: all win32bin manpages test install checktmp dist win32dist clean realclean
