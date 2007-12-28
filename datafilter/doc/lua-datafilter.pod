@@ -28,7 +28,7 @@ load it like this:
 
 You can use a variable called something other than C<Filter> if you'd like,
 or you could assign the table returned by C<require> to a global variable.
-In this documentation we'll assume your using a variable called C<Filter>.
+In this documentation we'll assume you're using a variable called C<Filter>.
 
 =head1 The simple API (string in, string out)
 
@@ -46,7 +46,7 @@ The name of the algorithm is the name of the Lua function you can call,
 which will be provided directly in the table returned by
 C<require "datafilter">.
 
-=head1 Algorhtm options
+=head1 Algorithm options
 
 Some algorithms accept options, which you can provide as a table as the
 second argument to their functions.
