@@ -162,7 +162,7 @@ add_input_data (Filter *filter, const unsigned char *data, size_t len) {
  * throw an exception directly because do_filtering() needs to be able to
  * do cleanup first. */
 #define ALGO_ERROR(msg) do { \
-    lua_pushstring(filter->L, msg); \
+    lua_pushliteral(filter->L, msg); \
     return 0; \
 } while (0)
 
@@ -268,12 +268,12 @@ output_lua_fh (Filter *filter, const unsigned char *out_end,
     lua_call(L, 2, 2);
 
     if (lua_isnil(L, -2)) {     /* write error, returned nil, errmsg */
-        lua_pushstring(L, "error writing to output file: ");
+        lua_pushliteral(L, "error writing to output file: ");
         if (lua_isstring(L, -2))
             lua_pushvalue(L, -2);
         else
-            lua_pushstring(L, "(file handle's write method didn't provide an"
-                           " error message");
+            lua_pushliteral(L, "(file handle's write method didn't provide an"
+                            " error message)");
         lua_concat(L, 2);
         lua_error(L);
     }
@@ -543,7 +543,7 @@ filter_addfile_function (lua_State *L, Filter *filter,
                 return;
             }
             else {                      /* read error */
-                lua_pushstring(L, "error reading from file: ");
+                lua_pushliteral(L, "error reading from file: ");
                 lua_pushvalue(L, -2);   /* error message from :read() */
                 lua_concat(L, 2);
                 lua_error(L);
@@ -619,7 +619,7 @@ filter_result (lua_State *L) {
     }
 
     lua_pushlstring(L, (const char *) filter->buf_out,
-                   filter->buf_out_end - filter->buf_out);
+                    filter->buf_out_end - filter->buf_out);
     return 1;
 }
 
@@ -655,11 +655,11 @@ luaopen_datafilter (lua_State *L) {
      *  _NAME, _VERSION, .new() */
     lua_createtable(L, 0, NUM_ALGO_DEFS + 3);
 
-    lua_pushstring(L, "_NAME");
-    lua_pushstring(L, "datafilter");
+    lua_pushliteral(L, "_NAME");
+    lua_pushliteral(L, "datafilter");
     lua_rawset(L, -3);
-    lua_pushstring(L, "_VERSION");
-    lua_pushstring(L, VERSION);
+    lua_pushliteral(L, "_VERSION");
+    lua_pushliteral(L, VERSION);
     lua_rawset(L, -3);
 
     def = filter_algorithms;
@@ -669,31 +669,31 @@ luaopen_datafilter (lua_State *L) {
         lua_rawset(L, -3);
     }
 
-    lua_pushstring(L, "new");
+    lua_pushliteral(L, "new");
     lua_pushcfunction(L, filter_new);
     lua_rawset(L, -3);
 
     /* Create the metatable for Filter objects returned from Filter:new() */
     luaL_newmetatable(L, FILTER_MT_NAME);
-    lua_pushstring(L, "_NAME");
-    lua_pushstring(L, "datafilter-object");
+    lua_pushliteral(L, "_NAME");
+    lua_pushliteral(L, "datafilter-object");
     lua_rawset(L, -3);
-    lua_pushstring(L, "add");
+    lua_pushliteral(L, "add");
     lua_pushcfunction(L, filter_add);
     lua_rawset(L, -3);
-    lua_pushstring(L, "addfile");
+    lua_pushliteral(L, "addfile");
     lua_pushcfunction(L, filter_addfile);
     lua_rawset(L, -3);
-    lua_pushstring(L, "result");
+    lua_pushliteral(L, "result");
     lua_pushcfunction(L, filter_result);
     lua_rawset(L, -3);
-    lua_pushstring(L, "finish");
+    lua_pushliteral(L, "finish");
     lua_pushcfunction(L, filter_finish);
     lua_rawset(L, -3);
-    lua_pushstring(L, "__gc");
+    lua_pushliteral(L, "__gc");
     lua_pushcfunction(L, filter_gc);
     lua_rawset(L, -3);
-    lua_pushstring(L, "__index");
+    lua_pushliteral(L, "__index");
     lua_pushvalue(L, -2);
     lua_rawset(L, -3);
     lua_pop(L, 1);
