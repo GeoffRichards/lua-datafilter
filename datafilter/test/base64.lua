@@ -1,252 +1,9 @@
 require "datafilter-test"
 local Filter = require "datafilter"
-local testcase = TestCase("Algorithms base64_decode and base64_encode")
 
-local misc_mapping, single_byte_mapping, bad_char_encodings
+module("test.base64", lunit.testcase, package.seeall)
 
-function testcase:test_trivial_obj ()
-    local obj = Filter:new("base64_encode")
-    is("", obj:result())
-    obj = Filter:new("base64_decode")
-    is("", obj:result())
-end
-
-function testcase:test_encode ()
-    for input, expected in pairs(misc_mapping) do
-        is(expected, Filter.base64_encode(input),
-           "encode value " .. string.format("%q", input))
-    end
-end
-
-function testcase:test_decode ()
-    for expected, input in pairs(misc_mapping) do
-        is(expected, Filter.base64_decode(input),
-           "decode value " .. string.format("%q", input))
-    end
-end
-
-function testcase:test_single_byte_encode ()
-    for input, expected in pairs(single_byte_mapping) do
-        is(expected, Filter.base64_encode(input),
-           "encode single byte " .. string.format("%q", input))
-    end
-end
-
-function testcase:test_single_byte_decode ()
-    for expected, input in pairs(single_byte_mapping) do
-        is(expected, Filter.base64_decode(input),
-           "decode to single byte from " .. string.format("%q", input))
-    end
-end
-
-function testcase:test_decode_with_whitespace ()
-    is("", Filter.base64_decode("  \t\n\r \13\10 "), "just whitespace")
-    is("xyz", Filter.base64_decode("eHl6   "), "whitespace after")
-    is("xyz", Filter.base64_decode(" e  H l 6 "),
-       "whitespace intermingled")
-    is("xy", Filter.base64_decode(" e  H k = "),
-       "whitespace intermingled, one padding char")
-    is("x", Filter.base64_decode(" e  A = = "),
-       "whitespace intermingled, two padding chars")
-end
-
-function testcase:test_big_whitespace ()
-    is("", Filter.base64_decode((" "):rep(8192)), "bufsize whitespace")
-
-    for i = 8187, 8193 do
-        is("xyz", Filter.base64_decode((" "):rep(i) .. "eHl6"),
-           i .. " bytes of whitespace plus block")
-    end
-
-    for i = 8187, 8193 do
-        is("xyz", Filter.base64_decode("eHl6" .. (" "):rep(i)),
-           "block plus " .. i .. " bytes of whitespace")
-    end
-end
-
-function testcase:test_whitespace_not_allowed ()
-    local encoded_cases = { "eHl6", "eHk=", "eA==", "" }
-    local options = { allow_whitespace = false }
-    for _, encoded in ipairs(encoded_cases) do
-        for space_pos = 0, encoded:len() do
-            local input = encoded:sub(1, space_pos) .. " " ..
-                          encoded:sub(space_pos + 1)
-            assert_error("whitespace not allowed in [" .. input .. "]",
-                         function () Filter.base64_decode(input, options) end)
-        end
-    end
-end
-
-function testcase:test_oo_encode ()
-    local obj = Filter:new("base64_encode")
-    obj:add("Aladdin")
-    obj:add(":")
-    obj:add("open sesame")
-    is("QWxhZGRpbjpvcGVuIHNlc2FtZQ==", obj:result())
-end
-
-function testcase:test_no_padding ()
-    for input, expected in pairs(misc_mapping) do
-        expected = expected:gsub("=+$", "", 1)
-        is(expected, Filter.base64_encode(input, { include_padding = false }),
-           "encode value without padding " .. string.format("%q", input))
-    end
-end
-
-local function test_with_line_breaking (line_ending)
-    for max_line_len = 1, 20 do
-        for input, expected in pairs(misc_mapping) do
-            local dots = ("."):rep(max_line_len)
-            expected = expected:gsub("(" .. dots .. ")", "%1" .. line_ending)
-            if expected ~= "" and not expected:find(line_ending .. "$") then
-                expected = expected .. line_ending
-            end
-            local got = Filter.base64_encode(input, {
-                line_ending = line_ending,
-                max_line_length = max_line_len,
-            })
-            local desc = "encode value with " .. max_line_len ..
-                         " bytes per line, line ending " ..
-                         string.format("%q", line_ending) .. ", input " ..
-                         string.format("%q", input)
-            is(expected, got, desc)
-        end
-    end
-end
-
-function testcase:test_eol ()
-    test_with_line_breaking("\13\10")
-    test_with_line_breaking("\13")
-    test_with_line_breaking("\10")
-    test_with_line_breaking("foobar baz")
-    test_with_line_breaking("")
-end
-
-function testcase:test_eol_defaults ()
-    local input = ("foobar"):rep(10)
-    local result = Filter.base64_encode(input)
-    is(("Zm9vYmFy"):rep(10), result, "no line breaking")
-    local result = Filter.base64_encode(input, { line_ending = "\10" })
-    is(("Zm9vYmFy"):rep(9) .. "Zm9v\10YmFy\10", result, "default line len")
-    local result = Filter.base64_encode(input, { max_line_length = 76 })
-    is(("Zm9vYmFy"):rep(9) .. "Zm9v\13\10YmFy\13\10", result,
-       "default line ending, explicit default line len")
-    local result = Filter.base64_encode(input, { max_line_length = 40 })
-    is(("Zm9vYmFy"):rep(5) .. "\13\10" .. ("Zm9vYmFy"):rep(5) .. "\13\10",
-       result, "default line ending, non-default line len")
-
-    is("ZnJvYg==", Filter.base64_encode("frob", { include_padding = true }),
-       "explicit default include_padding")
-end
-
-function testcase:test_missing_padding_error ()
-    assert_error("spare char", function () Filter.base64_decode("e") end)
-
-    assert_error("missing '==' in first block",
-                 function () Filter.base64_decode("eA") end)
-    assert_error("input has '=' instead of '==' in first block",
-                 function () Filter.base64_decode("eA=") end)
-    assert_error("missing '=' in first block",
-                 function () Filter.base64_decode("eHk") end)
-
-    assert_error("missing '==' after first block",
-                 function () Filter.base64_decode("eHl6eg") end)
-    assert_error("input has '=' instead of '==' in second block",
-                 function () Filter.base64_decode("eHl6eg=") end)
-    assert_error("missing '=' after first block",
-                 function () Filter.base64_decode("eHl6enk") end)
-end
-
-function testcase:test_missing_padding_ok ()
-    local options = { allow_missing_padding = true }
-
-    -- This is always wrong, even if you're lenient about missing padding.
-    assert_error("spare char",
-                 function () Filter.base64_decode("e", options) end)
-
-    is("x", Filter.base64_decode("eA", options),
-       "missing '==' in first block")
-    is("x", Filter.base64_decode("eA=", options),
-       "input has '=' instead of '==' in first block")
-    is("xy", Filter.base64_decode("eHk", options),
-       "missing '=' in first block")
-
-    is("xyzz", Filter.base64_decode("eHl6eg", options),
-       "missing '==' after first block")
-    is("xyzz", Filter.base64_decode("eHl6eg=", options),
-       "input has '=' instead of '==' in second block")
-    is("xyzzy", Filter.base64_decode("eHl6enk", options),
-       "missing '=' after first block")
-end
-
-function testcase:test_padding_in_wrong_place ()
-    assert_error("padding char first in block, end of input",
-                 function () Filter.base64_decode("=") end)
-    assert_error("padding char second in block, end of input",
-                 function () Filter.base64_decode("e=") end)
-
-    assert_error("padding char first in block, input remaining",
-                 function () Filter.base64_decode("=eHl6") end)
-    assert_error("padding char second in block, input remaining",
-                 function () Filter.base64_decode("e=eHl6") end)
-
-    assert_error("one padding char ok, but more input afterwards",
-                 function () Filter.base64_decode("eHk=eHl6") end)
-    assert_error("two padding chars ok, but more input afterwards",
-                 function () Filter.base64_decode("eA==eHl6") end)
-
-    assert_error("padding char followed by alphabet char instead of padding",
-                 function () Filter.base64_decode("eA=X") end)
-end
-
-local function test_spare_bits (input)
-    assert_error("spare bits set in " .. input,
-                 function () Filter.base64_decode(input) end)
-end
-
-function testcase:test_spare_bits_set ()
-    test_spare_bits("eHl=")
-    test_spare_bits("eHm=")
-    test_spare_bits("eHn=")
-
-    local last = {"B","C","D","E","F","G","H","I","J","K","L","M","N","O","P"}
-    for _, letter in ipairs(last) do
-        test_spare_bits("e" .. letter .. "==")
-    end
-end
-
-function testcase:test_bad_chars_error ()
-    for _, input in ipairs(bad_char_encodings) do
-        assert_error("bad characters detected: " .. string.format("%q", input),
-                     function () Filter.base64_decode(input) end)
-    end
-end
-
-function testcase:test_bad_chars_error ()
-    local options = { allow_invalid_characters = true }
-    for _, input in ipairs(bad_char_encodings) do
-        is("frob", Filter.base64_decode(input, options),
-           "bad characters skipped: " .. string.format("%q", input))
-    end
-end
-
-function testcase:test_bad_usage ()
-    local options = { line_ending = true }
-    assert_error("bad type for line_ending option",
-                 function () Filter.base64_encode("foo", options) end)
-
-    options = { max_line_length = "bad" }
-    assert_error("bad type for max_line_length option",
-                 function () Filter.base64_encode("foo", options) end)
-    options = { max_line_length = 0 }
-    assert_error("max_line_length must not be zero",
-                 function () Filter.base64_encode("foo", options) end)
-    options = { max_line_length = -23 }
-    assert_error("max_line_length must not be negative",
-                 function () Filter.base64_encode("foo", options) end)
-end
-
-misc_mapping = {
+local misc_mapping = {
     -- Test data from RFC 4648, section 10
     [""] = "",
     ["f"] = "Zg==",
@@ -259,7 +16,7 @@ misc_mapping = {
     ["Aladdin:open sesame"] = "QWxhZGRpbjpvcGVuIHNlc2FtZQ==",
 }
 
-single_byte_mapping = {
+local single_byte_mapping = {
     ["\0"] = "AA==",
     ["\1"] = "AQ==",
     ["\2"] = "Ag==",
@@ -520,7 +277,7 @@ single_byte_mapping = {
 
 -- All of these contain illegal characters, but if those are ignored then
 -- they all decode to 'frob'.
-bad_char_encodings = {
+local bad_char_encodings = {
     "*ZnJvYg==",
     "Zn*JvYg==",
     "ZnJv*Yg==",
@@ -535,5 +292,246 @@ bad_char_encodings = {
     "\128\159\160\255ZnJvYg==",
 }
 
-lunit.run()
+function test_trivial_obj ()
+    local obj = Filter:new("base64_encode")
+    is("", obj:result())
+    obj = Filter:new("base64_decode")
+    is("", obj:result())
+end
+
+function test_encode ()
+    for input, expected in pairs(misc_mapping) do
+        is(expected, Filter.base64_encode(input),
+           "encode value " .. string.format("%q", input))
+    end
+end
+
+function test_decode ()
+    for expected, input in pairs(misc_mapping) do
+        is(expected, Filter.base64_decode(input),
+           "decode value " .. string.format("%q", input))
+    end
+end
+
+function test_single_byte_encode ()
+    for input, expected in pairs(single_byte_mapping) do
+        is(expected, Filter.base64_encode(input),
+           "encode single byte " .. string.format("%q", input))
+    end
+end
+
+function test_single_byte_decode ()
+    for expected, input in pairs(single_byte_mapping) do
+        is(expected, Filter.base64_decode(input),
+           "decode to single byte from " .. string.format("%q", input))
+    end
+end
+
+function test_decode_with_whitespace ()
+    is("", Filter.base64_decode("  \t\n\r \13\10 "), "just whitespace")
+    is("xyz", Filter.base64_decode("eHl6   "), "whitespace after")
+    is("xyz", Filter.base64_decode(" e  H l 6 "),
+       "whitespace intermingled")
+    is("xy", Filter.base64_decode(" e  H k = "),
+       "whitespace intermingled, one padding char")
+    is("x", Filter.base64_decode(" e  A = = "),
+       "whitespace intermingled, two padding chars")
+end
+
+function test_big_whitespace ()
+    is("", Filter.base64_decode((" "):rep(8192)), "bufsize whitespace")
+
+    for i = 8187, 8193 do
+        is("xyz", Filter.base64_decode((" "):rep(i) .. "eHl6"),
+           i .. " bytes of whitespace plus block")
+    end
+
+    for i = 8187, 8193 do
+        is("xyz", Filter.base64_decode("eHl6" .. (" "):rep(i)),
+           "block plus " .. i .. " bytes of whitespace")
+    end
+end
+
+function test_whitespace_not_allowed ()
+    local encoded_cases = { "eHl6", "eHk=", "eA==", "" }
+    local options = { allow_whitespace = false }
+    for _, encoded in ipairs(encoded_cases) do
+        for space_pos = 0, encoded:len() do
+            local input = encoded:sub(1, space_pos) .. " " ..
+                          encoded:sub(space_pos + 1)
+            assert_error("whitespace not allowed in [" .. input .. "]",
+                         function () Filter.base64_decode(input, options) end)
+        end
+    end
+end
+
+function test_oo_encode ()
+    local obj = Filter:new("base64_encode")
+    obj:add("Aladdin")
+    obj:add(":")
+    obj:add("open sesame")
+    is("QWxhZGRpbjpvcGVuIHNlc2FtZQ==", obj:result())
+end
+
+function test_no_padding ()
+    for input, expected in pairs(misc_mapping) do
+        expected = expected:gsub("=+$", "", 1)
+        is(expected, Filter.base64_encode(input, { include_padding = false }),
+           "encode value without padding " .. string.format("%q", input))
+    end
+end
+
+local function test_with_line_breaking (line_ending)
+    for max_line_len = 1, 20 do
+        for input, expected in pairs(misc_mapping) do
+            local dots = ("."):rep(max_line_len)
+            expected = expected:gsub("(" .. dots .. ")", "%1" .. line_ending)
+            if expected ~= "" and not expected:find(line_ending .. "$") then
+                expected = expected .. line_ending
+            end
+            local got = Filter.base64_encode(input, {
+                line_ending = line_ending,
+                max_line_length = max_line_len,
+            })
+            local desc = "encode value with " .. max_line_len ..
+                         " bytes per line, line ending " ..
+                         string.format("%q", line_ending) .. ", input " ..
+                         string.format("%q", input)
+            is(expected, got, desc)
+        end
+    end
+end
+
+function test_eol ()
+    test_with_line_breaking("\13\10")
+    test_with_line_breaking("\13")
+    test_with_line_breaking("\10")
+    test_with_line_breaking("foobar baz")
+    test_with_line_breaking("")
+end
+
+function test_eol_defaults ()
+    local input = ("foobar"):rep(10)
+    local result = Filter.base64_encode(input)
+    is(("Zm9vYmFy"):rep(10), result, "no line breaking")
+    local result = Filter.base64_encode(input, { line_ending = "\10" })
+    is(("Zm9vYmFy"):rep(9) .. "Zm9v\10YmFy\10", result, "default line len")
+    local result = Filter.base64_encode(input, { max_line_length = 76 })
+    is(("Zm9vYmFy"):rep(9) .. "Zm9v\13\10YmFy\13\10", result,
+       "default line ending, explicit default line len")
+    local result = Filter.base64_encode(input, { max_line_length = 40 })
+    is(("Zm9vYmFy"):rep(5) .. "\13\10" .. ("Zm9vYmFy"):rep(5) .. "\13\10",
+       result, "default line ending, non-default line len")
+
+    is("ZnJvYg==", Filter.base64_encode("frob", { include_padding = true }),
+       "explicit default include_padding")
+end
+
+function test_missing_padding_error ()
+    assert_error("spare char", function () Filter.base64_decode("e") end)
+
+    assert_error("missing '==' in first block",
+                 function () Filter.base64_decode("eA") end)
+    assert_error("input has '=' instead of '==' in first block",
+                 function () Filter.base64_decode("eA=") end)
+    assert_error("missing '=' in first block",
+                 function () Filter.base64_decode("eHk") end)
+
+    assert_error("missing '==' after first block",
+                 function () Filter.base64_decode("eHl6eg") end)
+    assert_error("input has '=' instead of '==' in second block",
+                 function () Filter.base64_decode("eHl6eg=") end)
+    assert_error("missing '=' after first block",
+                 function () Filter.base64_decode("eHl6enk") end)
+end
+
+function test_missing_padding_ok ()
+    local options = { allow_missing_padding = true }
+
+    -- This is always wrong, even if you're lenient about missing padding.
+    assert_error("spare char",
+                 function () Filter.base64_decode("e", options) end)
+
+    is("x", Filter.base64_decode("eA", options),
+       "missing '==' in first block")
+    is("x", Filter.base64_decode("eA=", options),
+       "input has '=' instead of '==' in first block")
+    is("xy", Filter.base64_decode("eHk", options),
+       "missing '=' in first block")
+
+    is("xyzz", Filter.base64_decode("eHl6eg", options),
+       "missing '==' after first block")
+    is("xyzz", Filter.base64_decode("eHl6eg=", options),
+       "input has '=' instead of '==' in second block")
+    is("xyzzy", Filter.base64_decode("eHl6enk", options),
+       "missing '=' after first block")
+end
+
+function test_padding_in_wrong_place ()
+    assert_error("padding char first in block, end of input",
+                 function () Filter.base64_decode("=") end)
+    assert_error("padding char second in block, end of input",
+                 function () Filter.base64_decode("e=") end)
+
+    assert_error("padding char first in block, input remaining",
+                 function () Filter.base64_decode("=eHl6") end)
+    assert_error("padding char second in block, input remaining",
+                 function () Filter.base64_decode("e=eHl6") end)
+
+    assert_error("one padding char ok, but more input afterwards",
+                 function () Filter.base64_decode("eHk=eHl6") end)
+    assert_error("two padding chars ok, but more input afterwards",
+                 function () Filter.base64_decode("eA==eHl6") end)
+
+    assert_error("padding char followed by alphabet char instead of padding",
+                 function () Filter.base64_decode("eA=X") end)
+end
+
+local function test_spare_bits (input)
+    assert_error("spare bits set in " .. input,
+                 function () Filter.base64_decode(input) end)
+end
+
+function test_spare_bits_set ()
+    test_spare_bits("eHl=")
+    test_spare_bits("eHm=")
+    test_spare_bits("eHn=")
+
+    local last = {"B","C","D","E","F","G","H","I","J","K","L","M","N","O","P"}
+    for _, letter in ipairs(last) do
+        test_spare_bits("e" .. letter .. "==")
+    end
+end
+
+function test_bad_chars_error ()
+    for _, input in ipairs(bad_char_encodings) do
+        assert_error("bad characters detected: " .. string.format("%q", input),
+                     function () Filter.base64_decode(input) end)
+    end
+end
+
+function test_bad_chars_error ()
+    local options = { allow_invalid_characters = true }
+    for _, input in ipairs(bad_char_encodings) do
+        is("frob", Filter.base64_decode(input, options),
+           "bad characters skipped: " .. string.format("%q", input))
+    end
+end
+
+function test_bad_usage ()
+    local options = { line_ending = true }
+    assert_error("bad type for line_ending option",
+                 function () Filter.base64_encode("foo", options) end)
+
+    options = { max_line_length = "bad" }
+    assert_error("bad type for max_line_length option",
+                 function () Filter.base64_encode("foo", options) end)
+    options = { max_line_length = 0 }
+    assert_error("max_line_length must not be zero",
+                 function () Filter.base64_encode("foo", options) end)
+    options = { max_line_length = -23 }
+    assert_error("max_line_length must not be negative",
+                 function () Filter.base64_encode("foo", options) end)
+end
+
 -- vi:ts=4 sw=4 expandtab

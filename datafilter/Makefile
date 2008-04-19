@@ -78,7 +78,7 @@ doc/lua-datafilter-qp.3: doc/lua-datafilter-qp.pod Changes
 	            --release="$(VERSION)" --date="$(RELEASEDATE)" >$@
 
 test: all
-	for f in test/*.lua; do $(VALGRIND) lua $$f; done
+	$(VALGRIND) ./lunit test/*.lua
 
 install: all
 	mkdir -p $(LUA_CPATH)

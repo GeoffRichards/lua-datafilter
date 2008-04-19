@@ -1,45 +1,9 @@
 require "datafilter-test"
 local Filter = require "datafilter"
-local testcase = TestCase("Algorithm adler32")
 
-local misc_mapping, progressive_adler32_expected
+module("test.adler32", lunit.testcase, package.seeall)
 
-function testcase:test_trivial_obj ()
-    local obj = Filter:new("adler32")
-    is("00000001", bytes_to_hex(obj:result()))
-    local obj = Filter:new("adler32")
-    obj:add("")
-    is("00000001", bytes_to_hex(obj:result()))
-end
-
-function testcase:test_misc_adler32 ()
-    for input, expected in pairs(misc_mapping) do
-        local got = Filter.adler32(input)
-        is(4, got:len())
-        is(expected, bytes_to_hex(got),
-           "Adler32 of " .. string.format("%q", input))
-    end
-end
-
-function testcase:test_gradual_size_increase ()
-    local input = ""
-    local byte = 7
-
-    for i = 1, #progressive_adler32_expected do
-        local expected = progressive_adler32_expected[i]
-
-        input = input .. string.char(byte)
-        byte = (byte + 23) % 256
-        assert(input:len() == i)
-
-        local got = Filter.adler32(input)
-        is(4, got:len())
-        is(expected, bytes_to_hex(got),
-           "Adler32 of " .. string.format("%q", input))
-    end
-end
-
-misc_mapping = {
+local misc_mapping = {
     -- Test data from the test suite of the Digest::Adler32 Perl module
     [""] = "00000001",
     ["a"] = "00620062",
@@ -51,7 +15,7 @@ misc_mapping = {
 -- Data calculated with a bit of Perl code (in the file 't/adler32-gen.pl')
 -- where each entry in the array is for a chunk of data of as many bytes as its
 -- index, and the bytes all progress in a simple way.
-progressive_adler32_expected = {
+local progressive_adler32_expected = {
     "00080008",
     "002e0026",
     "0089005b",
@@ -310,5 +274,39 @@ progressive_adler32_expected = {
     "c9a27f81",
 }
 
-lunit.run()
+function test_trivial_obj ()
+    local obj = Filter:new("adler32")
+    is("00000001", bytes_to_hex(obj:result()))
+    local obj = Filter:new("adler32")
+    obj:add("")
+    is("00000001", bytes_to_hex(obj:result()))
+end
+
+function test_misc_adler32 ()
+    for input, expected in pairs(misc_mapping) do
+        local got = Filter.adler32(input)
+        is(4, got:len())
+        is(expected, bytes_to_hex(got),
+           "Adler32 of " .. string.format("%q", input))
+    end
+end
+
+function test_gradual_size_increase ()
+    local input = ""
+    local byte = 7
+
+    for i = 1, #progressive_adler32_expected do
+        local expected = progressive_adler32_expected[i]
+
+        input = input .. string.char(byte)
+        byte = (byte + 23) % 256
+        assert(input:len() == i)
+
+        local got = Filter.adler32(input)
+        is(4, got:len())
+        is(expected, bytes_to_hex(got),
+           "Adler32 of " .. string.format("%q", input))
+    end
+end
+
 -- vi:ts=4 sw=4 expandtab

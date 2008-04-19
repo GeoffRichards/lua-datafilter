@@ -31,6 +31,8 @@ doc/lua-datafilter-qp.pod
 doc/lua-datafilter.3
 doc/lua-datafilter.pod
 filter.c
+lunit
+lunit-console.lua
 lunit.lua
 t/addfile.lua
 t/adler32.lua

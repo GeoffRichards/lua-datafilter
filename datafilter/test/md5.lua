@@ -1,45 +1,9 @@
 require "datafilter-test"
 local Filter = require "datafilter"
-local testcase = TestCase("Algorithm md5")
 
-local misc_mapping, progressive_md5_expected
+module("test.md5", lunit.testcase, package.seeall)
 
-function testcase:test_trivial_obj ()
-    local obj = Filter:new("md5")
-    is("d41d8cd98f00b204e9800998ecf8427e", bytes_to_hex(obj:result()))
-    local obj = Filter:new("md5")
-    obj:add("")
-    is("d41d8cd98f00b204e9800998ecf8427e", bytes_to_hex(obj:result()))
-end
-
-function testcase:test_misc_md5 ()
-    for input, expected in pairs(misc_mapping) do
-        local got = Filter.md5(input)
-        is(16, got:len())
-        is(expected, bytes_to_hex(got),
-           "MD5 of " .. string.format("%q", input))
-    end
-end
-
-function testcase:test_gradual_size_increase ()
-    local input = ""
-    local byte = 7
-
-    for i = 1, #progressive_md5_expected do
-        local expected = progressive_md5_expected[i]
-
-        input = input .. string.char(byte)
-        byte = (byte + 23) % 256
-        assert(input:len() == i)
-
-        local got = Filter.md5(input)
-        is(16, got:len())
-        is(expected, bytes_to_hex(got),
-           "MD5 of " .. string.format("%q", input))
-    end
-end
-
-misc_mapping = {
+local misc_mapping = {
     -- Test data from RFC 1321, appendix 5
     [""] = "d41d8cd98f00b204e9800998ecf8427e",
     ["a"] = "0cc175b9c0f1b6a831c399e269772661",
@@ -55,7 +19,7 @@ misc_mapping = {
 -- Data calculated with a bit of Perl code (in the file 't/md5-gen.pl') where
 -- each entry in the array is for a chunk of data of as many bytes as its
 -- index, and the bytes all progress in a simple way.
-progressive_md5_expected = {
+local progressive_md5_expected = {
     "89e74e640b8c46257a29de0616794d5d",
     "7240e7b150d6025912db8cdcb3feebeb",
     "88301910845f8f4b88aeedce3cb1c4c9",
@@ -314,5 +278,39 @@ progressive_md5_expected = {
     "f9b574526cc9a4528d45f8816706fa83",
 }
 
-lunit.run()
+function test_trivial_obj ()
+    local obj = Filter:new("md5")
+    is("d41d8cd98f00b204e9800998ecf8427e", bytes_to_hex(obj:result()))
+    local obj = Filter:new("md5")
+    obj:add("")
+    is("d41d8cd98f00b204e9800998ecf8427e", bytes_to_hex(obj:result()))
+end
+
+function test_misc_md5 ()
+    for input, expected in pairs(misc_mapping) do
+        local got = Filter.md5(input)
+        is(16, got:len())
+        is(expected, bytes_to_hex(got),
+           "MD5 of " .. string.format("%q", input))
+    end
+end
+
+function test_gradual_size_increase ()
+    local input = ""
+    local byte = 7
+
+    for i = 1, #progressive_md5_expected do
+        local expected = progressive_md5_expected[i]
+
+        input = input .. string.char(byte)
+        byte = (byte + 23) % 256
+        assert(input:len() == i)
+
+        local got = Filter.md5(input)
+        is(16, got:len())
+        is(expected, bytes_to_hex(got),
+           "MD5 of " .. string.format("%q", input))
+    end
+end
+
 -- vi:ts=4 sw=4 expandtab

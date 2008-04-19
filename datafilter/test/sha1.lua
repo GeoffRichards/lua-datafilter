@@ -1,47 +1,9 @@
 require "datafilter-test"
 local Filter = require "datafilter"
-local testcase = TestCase("Algorithm sha1")
 
-local misc_mapping, progressive_sha1_expected
+module("test.sha1", lunit.testcase, package.seeall)
 
-function testcase:test_trivial_obj ()
-    local obj = Filter:new("sha1")
-    is("da39a3ee5e6b4b0d3255bfef95601890afd80709", bytes_to_hex(obj:result()))
-    local obj = Filter:new("sha1")
-    obj:add("")
-    is("da39a3ee5e6b4b0d3255bfef95601890afd80709", bytes_to_hex(obj:result()))
-end
-
-function testcase:test_misc_sha1 ()
-    for input, expected in pairs(misc_mapping) do
-        local got = Filter.sha1(input)
-        is(20, got:len())
-        local input_msg = input:len() < 80 and input
-                                            or input:sub(1, 80) .. "..."
-        is(expected, bytes_to_hex(got),
-           "SHA1 of " .. string.format("%q", input))
-    end
-end
-
-function testcase:test_gradual_size_increase ()
-    local input = ""
-    local byte = 7
-
-    for i = 1, #progressive_sha1_expected do
-        local expected = progressive_sha1_expected[i]
-
-        input = input .. string.char(byte)
-        byte = (byte + 23) % 256
-        assert(input:len() == i)
-
-        local got = Filter.sha1(input)
-        is(20, got:len())
-        is(expected, bytes_to_hex(got),
-           "SHA1 of " .. string.format("%q", input))
-    end
-end
-
-misc_mapping = {
+local misc_mapping = {
     [""] = "da39a3ee5e6b4b0d3255bfef95601890afd80709",
     -- Test data from RFC 3174, section 7.3
     ["abc"] = "a9993e364706816aba3e25717850c26c9cd0d89d",
@@ -55,7 +17,7 @@ misc_mapping = {
 -- Data calculated with a bit of Perl code (in the file 't/sha1-gen.pl') where
 -- each entry in the array is for a chunk of data of as many bytes as its
 -- index, and the bytes all progress in a simple way.
-progressive_sha1_expected = {
+local progressive_sha1_expected = {
     "5d1be7e9dda1ee8896be5b7e34a85ee16452a7b4",
     "654d40aef7d1d67701ffb0ea3d360ec96b1a9d9a",
     "9efb20f73c11e47be0d0ed56607a9a3ee953d224",
@@ -314,5 +276,41 @@ progressive_sha1_expected = {
     "cc6b8e641f76edcee1034ff46d970327918f2dfa",
 }
 
-lunit.run()
+function test_trivial_obj ()
+    local obj = Filter:new("sha1")
+    is("da39a3ee5e6b4b0d3255bfef95601890afd80709", bytes_to_hex(obj:result()))
+    local obj = Filter:new("sha1")
+    obj:add("")
+    is("da39a3ee5e6b4b0d3255bfef95601890afd80709", bytes_to_hex(obj:result()))
+end
+
+function test_misc_sha1 ()
+    for input, expected in pairs(misc_mapping) do
+        local got = Filter.sha1(input)
+        is(20, got:len())
+        local input_msg = input:len() < 80 and input
+                                            or input:sub(1, 80) .. "..."
+        is(expected, bytes_to_hex(got),
+           "SHA1 of " .. string.format("%q", input))
+    end
+end
+
+function test_gradual_size_increase ()
+    local input = ""
+    local byte = 7
+
+    for i = 1, #progressive_sha1_expected do
+        local expected = progressive_sha1_expected[i]
+
+        input = input .. string.char(byte)
+        byte = (byte + 23) % 256
+        assert(input:len() == i)
+
+        local got = Filter.sha1(input)
+        is(20, got:len())
+        is(expected, bytes_to_hex(got),
+           "SHA1 of " .. string.format("%q", input))
+    end
+end
+
 -- vi:ts=4 sw=4 expandtab

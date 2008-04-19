@@ -1,3 +1,7 @@
+1.1     2008-00-00
+
+ * Switch test suite from Lunit 0.3 to Lunit 0.4alpha.
+
 1.0     2007-09-14
 
  * Initial release.

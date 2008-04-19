@@ -3,9 +3,8 @@
 package.cpath = ".libs/liblua-?.so;" .. package.cpath
 
 require "lunit"
-lunit.import "all"
 
-is = assert_equal
+is = lunit.assert_equal
 
 function read_file (filename)
     local fh = io.open(filename, "rb")

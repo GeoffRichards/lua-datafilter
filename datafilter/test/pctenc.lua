@@ -1,71 +1,9 @@
 require "datafilter-test"
 local Filter = require "datafilter"
-local testcase = TestCase("Algorithms uri_decode and uri_encode")
 
-local default_charset_mapping
+module("test.pctenc", lunit.testcase, package.seeall)
 
-function testcase:test_empty ()
-    is("", Filter.percent_encode(""))
-    is("", Filter.percent_decode(""))
-end
-
-function testcase:test_encode ()
-    for input, expected in pairs(default_charset_mapping) do
-        is(expected, Filter.percent_encode(input),
-           "encode value " .. string.format("%q", input))
-    end
-end
-
-function testcase:test_decode ()
-    for expected, input in pairs(default_charset_mapping) do
-        is(expected, Filter.percent_decode(input),
-           "decode value " .. string.format("%q", input))
-    end
-end
-
-function testcase:test_encode_nondefault_safe_bytes ()
-    local options = { safe_bytes = "acf" }
-    is("%20a%62c%64%65f%67%25", Filter.percent_encode(" abcdefg%", options))
-    options = { safe_bytes = 23 }
-    is("%3123%34", Filter.percent_encode("1234", options))
-end
-
-function testcase:test_decode_hex_case_insensitive ()
-    is("\171/\255\255\255", Filter.percent_decode("%ab%2f%fF%Ff%ff"))
-end
-
-function testcase:test_big ()
-    for bufsize = 8185, 8194 do
-        local padding = ("x"):rep(bufsize)
-        is(padding .. "^\"%", Filter.percent_decode(padding .. "%5e%22%25"))
-        is(padding .. "%5E%22%25", Filter.percent_encode(padding .. "^\"%"))
-    end
-end
-
-function testcase:test_bad_hex_detected ()
-    assert_error("no hex digits",
-                 function () Filter.percent_decode("foo%", options) end)
-    assert_error("only one hex digit",
-                 function () Filter.percent_decode("foo%3", options) end)
-    assert_error("bad first hex digit",
-                 function () Filter.percent_decode("foo%G3", options) end)
-    assert_error("bad second hex digit",
-                 function () Filter.percent_decode("foo%3g", options) end)
-end
-
-function testcase:test_bad_usage ()
-    local options = { safe_bytes = true }
-    assert_error("bad value for 'safe_bytes' option",
-                 function () Filter.percent_encode("x%y", options) end)
-    options = { safe_bytes = "o%" }
-    assert_error("can't declare '%' to be safe char",
-                 function () Filter.percent_encode("x%y", options) end)
-    options = { safe_bytes = "yxy" }
-    assert_error("don't repeat declaration of same safe byte",
-                 function () Filter.percent_encode("x%y", options) end)
-end
-
-default_charset_mapping = {
+local default_charset_mapping = {
     [""] = "",
     -- All unreserved characters
     ["ABCDEFGHIJKLMNOPQRSTUVWXYZ"] = "ABCDEFGHIJKLMNOPQRSTUVWXYZ",
@@ -106,5 +44,66 @@ default_charset_mapping = {
     ["\195\128_\227\130\162"] = "%C3%80_%E3%82%A2",
 }
 
-lunit.run()
+function test_empty ()
+    is("", Filter.percent_encode(""))
+    is("", Filter.percent_decode(""))
+end
+
+function test_encode ()
+    for input, expected in pairs(default_charset_mapping) do
+        is(expected, Filter.percent_encode(input),
+           "encode value " .. string.format("%q", input))
+    end
+end
+
+function test_decode ()
+    for expected, input in pairs(default_charset_mapping) do
+        is(expected, Filter.percent_decode(input),
+           "decode value " .. string.format("%q", input))
+    end
+end
+
+function test_encode_nondefault_safe_bytes ()
+    local options = { safe_bytes = "acf" }
+    is("%20a%62c%64%65f%67%25", Filter.percent_encode(" abcdefg%", options))
+    options = { safe_bytes = 23 }
+    is("%3123%34", Filter.percent_encode("1234", options))
+end
+
+function test_decode_hex_case_insensitive ()
+    is("\171/\255\255\255", Filter.percent_decode("%ab%2f%fF%Ff%ff"))
+end
+
+function test_big ()
+    for bufsize = 8185, 8194 do
+        local padding = ("x"):rep(bufsize)
+        is(padding .. "^\"%", Filter.percent_decode(padding .. "%5e%22%25"))
+        is(padding .. "%5E%22%25", Filter.percent_encode(padding .. "^\"%"))
+    end
+end
+
+function test_bad_hex_detected ()
+    local options = {}
+    assert_error("no hex digits",
+                 function () Filter.percent_decode("foo%", options) end)
+    assert_error("only one hex digit",
+                 function () Filter.percent_decode("foo%3", options) end)
+    assert_error("bad first hex digit",
+                 function () Filter.percent_decode("foo%G3", options) end)
+    assert_error("bad second hex digit",
+                 function () Filter.percent_decode("foo%3g", options) end)
+end
+
+function test_bad_usage ()
+    local options = { safe_bytes = true }
+    assert_error("bad value for 'safe_bytes' option",
+                 function () Filter.percent_encode("x%y", options) end)
+    options = { safe_bytes = "o%" }
+    assert_error("can't declare '%' to be safe char",
+                 function () Filter.percent_encode("x%y", options) end)
+    options = { safe_bytes = "yxy" }
+    assert_error("don't repeat declaration of same safe byte",
+                 function () Filter.percent_encode("x%y", options) end)
+end
+
 -- vi:ts=4 sw=4 expandtab

@@ -1,17 +1,22 @@
 require "datafilter-test"
 local Filter = require "datafilter"
-local testcase = TestCase("Algorithms hex_lower and hex_upper")
 
-local misc_binary_data
+module("test.hex", lunit.testcase, package.seeall)
 
-function testcase:test_trivial_obj ()
+local misc_binary_data = {
+    "",
+    "x\0y",
+    "\0\15\240\255",
+}
+
+function test_trivial_obj ()
     local obj = Filter:new("hex_lower")
     is("", obj:result())
     obj = Filter:new("hex_upper")
     is("", obj:result())
 end
 
-function testcase:test_misc_lowercase ()
+function test_misc_lowercase ()
     for num, input in ipairs(misc_binary_data) do
         local expected = bytes_to_hex(input)
         is(expected, Filter.hex_lower(input),
@@ -19,7 +24,7 @@ function testcase:test_misc_lowercase ()
     end
 end
 
-function testcase:test_misc_uppercase ()
+function test_misc_uppercase ()
     for num, input in ipairs(misc_binary_data) do
         local expected = bytes_to_hex(input):upper()
         is(expected, Filter.hex_upper(input),
@@ -27,7 +32,7 @@ function testcase:test_misc_uppercase ()
     end
 end
 
-function testcase:test_single_byte_lowercase ()
+function test_single_byte_lowercase ()
     for code = 0, 255 do
         local input = string.char(code)
         local expected = bytes_to_hex(input)
@@ -36,7 +41,7 @@ function testcase:test_single_byte_lowercase ()
     end
 end
 
-function testcase:test_single_byte_uppercase ()
+function test_single_byte_uppercase ()
     for code = 0, 255 do
         local input = string.char(code)
         local expected = bytes_to_hex(input):upper()
@@ -45,7 +50,7 @@ function testcase:test_single_byte_uppercase ()
     end
 end
 
-function testcase:test_hex_big ()
+function test_hex_big ()
     local input = ""
     for code = 0, 255 do input = input .. string.char(code) end
     local reps = 35     -- big enough to blow the input and output buffers
@@ -62,11 +67,4 @@ function testcase:test_hex_big ()
     is(expected, got, "uppercase hex of large amount of input")
 end
 
-misc_binary_data = {
-    "",
-    "x\0y",
-    "\0\15\240\255",
-}
-
-lunit.run()
 -- vi:ts=4 sw=4 expandtab

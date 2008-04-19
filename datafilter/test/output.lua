@@ -1,10 +1,11 @@
 require "datafilter-test"
 local Filter = require "datafilter"
-local testcase = TestCase("Different output methods in OO API")
+
+module("test.output", lunit.testcase, package.seeall)
 
 local big_expected = ("YWJjZGVmZ2hpamts"):rep(8192)
 
-function testcase:test_output_string_repeatedly ()
+function test_output_string_repeatedly ()
     local obj = Filter:new("base64_encode")
     obj:add("foobar")
     obj:add("and some more")
@@ -13,14 +14,14 @@ function testcase:test_output_string_repeatedly ()
     end
 end
 
-function testcase:test_output_simple_big ()
+function test_output_simple_big ()
     local input = ("abcdefghijkl"):rep(8192)
     local got = Filter.base64_encode(input)
     is(131072, got:len())
     is(big_expected, got)
 end
 
-function testcase:test_output_string_big ()
+function test_output_string_big ()
     local obj = Filter:new("base64_encode")
     -- This should force it to reallocate the buffer.  The default buffer is
     -- likely to be in the region of 8Kb, the result of this will be 128Kb.
@@ -29,7 +30,7 @@ function testcase:test_output_string_big ()
     is(big_expected, obj:result())
 end
 
-function testcase:test_output_filename ()
+function test_output_filename ()
     local tmpname = os.tmpname()
     local obj = Filter:new("base64_encode", tmpname)
     obj:add("foobar")
@@ -40,7 +41,7 @@ function testcase:test_output_filename ()
     assert(os.remove(tmpname))
 end
 
-function testcase:test_output_filename_big ()
+function test_output_filename_big ()
     local tmpname = os.tmpname()
     local obj = Filter:new("base64_encode", tmpname)
     for _ = 1, 8192 do obj:add("abcdefghijkl") end
@@ -51,12 +52,12 @@ function testcase:test_output_filename_big ()
     assert(os.remove(tmpname))
 end
 
-function testcase:test_output_filename_write_error ()
+function test_output_filename_write_error ()
     assert_error("trying to write to a directory",
                  function () Filter:new("base64_encode", "test") end)
 end
 
-function testcase:test_output_file_handle ()
+function test_output_file_handle ()
     local tmpname = os.tmpname()
     local fh = assert(io.open(tmpname, "wb"))
     local obj = Filter:new("base64_encode", fh)
@@ -69,7 +70,7 @@ function testcase:test_output_file_handle ()
     assert(os.remove(tmpname))
 end
 
-function testcase:test_output_file_handle_big ()
+function test_output_file_handle_big ()
     local tmpname = os.tmpname()
     local fh = assert(io.open(tmpname, "wb"))
     local obj = Filter:new("base64_encode", fh)
@@ -89,7 +90,7 @@ local function fake_file_handle_write (self, arg, extra)
     return true
 end
 
-function testcase:test_output_fake_file_handle ()
+function test_output_fake_file_handle ()
     local fh = { data = "", write = fake_file_handle_write }
     local obj = Filter:new("md5", fh)
     obj:add("foobar")
@@ -97,7 +98,7 @@ function testcase:test_output_fake_file_handle ()
     is("3858f62230ac3c915f300c664312c63f", bytes_to_hex(fh.data))
 end
 
-function testcase:test_output_fake_file_handle_mt ()
+function test_output_fake_file_handle_mt ()
     local fhmt = { write = fake_file_handle_write }
     fhmt.__index = fhmt
     local fh = { data = "" }
@@ -108,7 +109,7 @@ function testcase:test_output_fake_file_handle_mt ()
     is("3858f62230ac3c915f300c664312c63f", bytes_to_hex(fh.data))
 end
 
-function testcase:test_output_fake_file_handle_fail ()
+function test_output_fake_file_handle_fail ()
     local fh = { write = function () return nil, "buggerup" end }
     local obj = Filter:new("md5", fh)
     obj:add("foobar")
@@ -116,20 +117,20 @@ function testcase:test_output_fake_file_handle_fail ()
                  function () obj:finish() end)
 end
 
-function testcase:test_output_fake_file_handle_error ()
+function test_output_fake_file_handle_error ()
     local fh = { write = function () error"grumpy write method" end }
     local obj = Filter:new("md5", fh)
     obj:add("foobar")
     assert_error("'write' method dies", function () obj:finish() end)
 end
 
-function testcase:test_output_fake_file_handle_bad_write_method ()
+function test_output_fake_file_handle_bad_write_method ()
     local fh = { data = "", write = 123 }
     assert_error("'write' method is not a function",
                  function () Filter:new("md5", fh) end)
 end
 
-function testcase:test_output_function ()
+function test_output_function ()
     local got = ""
     local func = function (data) got = got .. data end
     local obj = Filter:new("base64_encode", func)
@@ -140,7 +141,7 @@ function testcase:test_output_function ()
     assert_error("output sent elsewhere", function () obj:result() end)
 end
 
-function testcase:test_output_function_big ()
+function test_output_function_big ()
     local got = ""
     local func = function (data) got = got .. data end
     local obj = Filter:new("base64_encode", func)
@@ -150,14 +151,14 @@ function testcase:test_output_function_big ()
     is(big_expected, got)
 end
 
-function testcase:test_output_function_error ()
+function test_output_function_error ()
     local func = function (data) error"grumpy callback function" end
     local obj = Filter:new("base64_encode", func)
     obj:add("foo")
     assert_error("callback throws exception", function () obj:finish() end)
 end
 
-function testcase:test_bad_usage ()
+function test_bad_usage ()
     assert_error("too many args",
                  function () Filter:new("md5", nil, "foo") end)
     assert_error("invalid algo name", function () Filter:new("md5\0foo") end)
@@ -173,7 +174,7 @@ function testcase:test_bad_usage ()
     assert_error("calling finish twice", function () obj:finish() end)
 end
 
-function testcase:test_reusing_file_handle ()
+function test_reusing_file_handle ()
     local tmpname = os.tmpname()
     local fh = assert(io.open(tmpname, "wb"))
     local obj = Filter:new("base64_encode", fh)
@@ -189,5 +190,4 @@ function testcase:test_reusing_file_handle ()
     assert(os.remove(tmpname))
 end
 
-lunit.run()
 -- vi:ts=4 sw=4 expandtab
