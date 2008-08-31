@@ -67,4 +67,42 @@ function test_hex_big ()
     is(expected, got, "uppercase hex of large amount of input")
 end
 
+function test_decode_hex ()
+    -- Create some test input and expected binary data that matches.
+    local input = " \t\n\r "
+    local expected = ""
+    for code = 0, 255 do
+        input = input .. string.format("%02x%02X", code, code)
+        expected = expected .. string.char(code, code)
+    end
+    input = input .. "\n"
+    for _, data in ipairs(misc_binary_data) do
+        input = input .. Filter.hex_lower(data) ..
+                         Filter.hex_upper(data) .. "\n"
+        expected = expected .. data .. data
+    end
+
+    -- Enough repetitions to make it big enough to deal with in chunks.
+    input = input:rep(100)
+    expected = expected:rep(100)
+
+    is(expected, Filter.hex_decode(input))
+
+    -- Test for digits of the same byte separated by whitespace.
+    is("xyz", Filter.hex_decode("7 87 9\n7\na\n"))
+
+    -- Check empty input.
+    is("", Filter.hex_decode(""))
+    is("", Filter.hex_decode(" \n\t \r "))
+end
+
+function test_decode_hex_bad ()
+    assert_error("bad character instead of first digit",
+                 function () Filter.hex_decode("01 *3 78") end)
+    assert_error("bad character instead of second digit",
+                 function () Filter.hex_decode("01 2* 78") end)
+    assert_error("odd number of digits",
+                 function () Filter.hex_decode("01 23 7 ") end)
+end
+
 -- vi:ts=4 sw=4 expandtab

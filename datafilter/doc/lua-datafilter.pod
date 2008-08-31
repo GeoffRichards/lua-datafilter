@@ -208,12 +208,24 @@ the C<:new()> method when using the OO interface.
 Encode binary data as text using the Base64 given in S<RFC 4648>.
 See L<lua-datafilter-base64(3)> for details and available options.
 
+=item hex_decode
+
+Textual input consisting of hexadecimal numbers is decoded into binary
+data.  This is the reverse of the C<hex_lower> and C<hex_upper> functions.
+This can be used to handle some encoded binary files stored in PostScript
+or PDF documents.
+
+Each pair of hexadecimal digits is decoded into one byte.  Whitespace
+characters are ignored.  Any other character in the input will cause an
+error, as will an odd number of hexadecimal characters.
+
 =item hex_lower, hex_upper
 
 Binary input data is encoded as a series of hexadecimal digits, using
 either lowercase or uppercase letters for the S<digits 10E<ndash>15>.
 These algorithms don't have any options, and there isn't any input they
-consider to be invalid.
+consider to be invalid.  The C<hex_decode> function will reverse the
+operation of either of these functions.
 
 =item percent_decode, percent_encode
 
