@@ -1,3 +1,9 @@
+The hex_lower and hex_upper algorithms could have options for putting in
+automatic line breaks, like base64.
+
+Percent encoding doc has a warning that it's not binary safe.  I should
+either remove that warning or address the problem (if it is a problem).
+
 Make it possible to do percent encoding as application/x-www-form-urlencoded:
     http://www.w3.org/TR/html4/interact/forms.html#h-17.13.4.1
 

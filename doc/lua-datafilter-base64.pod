@@ -14,12 +14,12 @@ to use them.
 C<base64_encode> will produce a continuous stream of US-ASCII characters
 encoding the input data as Base64, using the standard alphabet (the uppercase
 letters C<A>E<ndash>C<Z>, the lowercase letters C<a>E<ndash>C<z>, the digits
-C<0>E<ndash>C<9>, and the S<characters C<+>> S<and C</>>).
+C<0>E<ndash>C<9>, and the charactersE<nbsp>C<+> andE<nbsp>C</>).
 
 There will be no line breaks in the output, even at the end.
 
 Padding C<=> characters will be added at the end of the output if necessary
-to make it a multiple S<4 characters> long.
+to make it a multiple of four characters long.
 
 =head1 Options for C<base64_encode>
 
@@ -30,7 +30,7 @@ The following options are available to modify the default behaviour:
 =item include_padding
 
 This is C<true> by default, but setting it to C<false> will cause the
-S<padding C<=>> characters not to be put on the end of the output.
+paddingE<nbsp>C<=> characters not to be put on the end of the output.
 
 =item line_ending
 

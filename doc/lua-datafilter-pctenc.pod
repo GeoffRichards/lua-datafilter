@@ -11,7 +11,7 @@ to use them.
 
 =head1 Default behaviour of C<percent_encode>
 
-C<percent_encode> will escape certain any bytes in the input which it
+C<percent_encode> will escape any bytes in the input which it
 considers to be 'unsafe', as a percent sign followed by a two-digit
 hexadecimal number indicating the value of the original byte.  Bytes which
 are safe are output unchanged.
@@ -19,8 +19,8 @@ are safe are output unchanged.
 The bytes which are escaped are those which don't occur in a defined set of
 'safe' bytes.  The default set of safe bytes are those which are US-ASCII
 characters unreserved for use in URIs by S<RFC 3986>.  These are all uppercase
-and lowercase letters, digits, and the characters S<hyphen (C<->)>,
-S<fullstop (C<.>)>, S<underscore (C<_>)>, and S<tilde (C<~>)>.
+and lowercase letters, digits, and the characters hyphenE<nbsp>(C<->),
+fullstopE<nbsp>(C<.>), underscoreE<nbsp>(C<_>), and tildeE<nbsp>(C<~>).
 
 Uppercase characters are always used for the hex numbers.
 
