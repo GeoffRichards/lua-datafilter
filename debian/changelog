@@ -1,3 +1,9 @@
+lua-datafilter (1.1-1) unstable; urgency=low
+
+  * New source release.  Minor bug fixes and packaging improvements.
+
+ -- Geoff Richards <geoff@geoffrichards.co.uk>  Mon, 16 Jul 2012 16:05:14 +0100
+
 lua-datafilter (1.0-1) unstable; urgency=low
 
   * Initial release.

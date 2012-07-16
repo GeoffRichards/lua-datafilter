@@ -30,9 +30,10 @@ LDFLAGS := $(shell pkg-config --libs lua5.1)
 # the test suite because it makes the assert() errors clearer and avoids
 # warnings about ridiculously long string constants with some versions of gcc.
 #CFLAGS := $(CFLAGS) -O3 -fomit-frame-pointer
+CFLAGS := $(CFLAGS) -O2
 
 # Uncomment this line to enable debugging.
-DEBUG := -g
+#DEBUG := -g
 
 # Uncomment one of these lines to enable profiling and/or gcov coverage testing.
 #DEBUG := $(DEBUG) -pg
