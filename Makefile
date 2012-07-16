@@ -40,22 +40,6 @@ DEBUG := -g
 
 all: liblua-datafilter.la manpages
 
-# This is for building the Windows DLL for the module.  You might have to
-# tweak the location of the MingW32 compiler and the Lua library and include
-# files to get it to work.  The defaults here are set up for the Lua libraries
-# to be unpacked in the current directory, and to compile on Debian Linux
-# with the Windows cross compiler from the 'mingw32' package.
-WIN32CC = /usr/bin/i586-mingw32msvc-cc
-WIN32CFLAGS := -O2 -I/usr/i586-mingw32msvc/include -Iinclude \
-               -DVERSION=\"$(VERSION)\"
-WIN32LDFLAGS := -L. -llua5.1 -L/usr/i586-mingw32msvc/lib \
-                --no-undefined --enable-runtime-pseudo-reloc
-win32bin: datafilter.dll
-filter.win32.o: filter.c datafilter.h algo/*.c algorithms.c
-	$(WIN32CC) $(DEBUG) $(WIN32CFLAGS) -c -o $@ $<
-datafilter.dll: filter.win32.o
-	$(WIN32CC) $(DEBUG) -O -Wl,-S -shared -o $@ $< $(WIN32LDFLAGS)
-
 manpages: doc/lua-datafilter.3 doc/lua-datafilter-base64.3 doc/lua-datafilter-pctenc.3 doc/lua-datafilter-qp.3
 doc/lua-datafilter.3: doc/lua-datafilter.pod Changes
 	sed 's/E<copy>/(c)/g' <$< | sed 's/E<ndash>/-/g' | \
@@ -101,21 +85,7 @@ dist: all checktmp
 	cd tmp && tar cf - $(DISTNAME) | gzip -9 >../$(DISTNAME).tar.gz
 	cd tmp && tar cf - $(DISTNAME) | bzip2 -9 >../$(DISTNAME).tar.bz2
 	rm -rf tmp
-win32dist: win32bin checktmp
-	mkdir -p tmp/$(DISTNAME).win32
-	rm -f $(DISTNAME).win32.zip
-	cp datafilter.dll tmp/$(DISTNAME).win32/
-	cp README.win32bin tmp/$(DISTNAME).win32/README
-	cd tmp && zip -q -r -9 ../$(DISTNAME).win32.zip $(DISTNAME).win32
-	rm -rf tmp
 
-
-# Dependencies.
-%.d: %.c
-	@echo 'DEP>' $@
-	@$(CC) -M $(CFLAGS) $< | \
-	   sed -e 's,\($*\)\.o[ :]*,\1.lo $@ : ,g' > $@
--include $(SOURCES:.c=.d)
 
 %.lo: %.c
 	@echo 'CC>' $@
@@ -124,17 +94,17 @@ liblua-datafilter.la: filter.lo
 	@echo 'LD>' $@
 	@$(LIBTOOL) --mode=link $(CC) $(LDFLAGS) $(DEBUG) -o $@ $< -rpath $(LIBDIR)
 
-filter.lo: algorithms.c
+filter.lo: filter.c datafilter.h algorithms.c algo/base64.c algo/qp.c algo/pctenc.c algo/md5.c algo/sha1.c algo/adler32.c algo/hex.c algorithms.c
+
 algorithms.c: algorithms.txt algorithms.pl
 	./algorithms.pl $< $@
 
 clean:
-	rm -f *.o *.lo *.d core
-	rm -f filter.win32.o datafilter.dll
+	rm -f *.o *.lo
 	rm -rf liblua-datafilter.la .libs
 	rm -f gmon.out *.bb *.bbg *.da *.gcov
 realclean: clean
 	rm -f algorithms.c
 	rm -f doc/lua-datafilter*.3
 
-.PHONY: all win32bin manpages test install checktmp dist win32dist clean realclean
+.PHONY: all manpages test install checktmp dist clean realclean
