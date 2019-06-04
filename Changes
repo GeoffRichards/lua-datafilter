@@ -1,3 +1,10 @@
+1.2     2019-06-04
+
+ * Make MD5 implementation work on 64 bit machines.
+ * Change Makefile so it can be built for Lua 5.2 and Lua 5.3.
+ * Switch test suite from Lunit 0.5 to Lunitx 0.8.1 for Lua 5.2
+   and 5.3 compatibility and simplify the way the tests are run.
+
 1.1     2012-07-16
 
  * Add new algorithm 'hex_decode'.

@@ -1,3 +1,10 @@
+lua-datafilter (1.2-1) unstable; urgency=low
+
+  * New source release.  Lua 5.2 and Lua 5.3 compatibility
+  * Fixes MD5 to work on 64 bit machines.
+
+ -- Geoff Richards <geoff@geoffrichards.co.uk>  Tue, 04 Jun 2019 19:15:33 +0100
+
 lua-datafilter (1.1-1) unstable; urgency=low
 
   * New source release.  Minor bug fixes and packaging improvements.

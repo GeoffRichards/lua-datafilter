@@ -1,3 +1,4 @@
 #!/usr/bin/make -f
 
-include /usr/share/cdbs/1/class/lua.mk
+%:
+	dh $@ --buildsystem=lua --with lua

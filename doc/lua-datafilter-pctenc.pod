@@ -53,6 +53,3 @@ a hexadecimal digit, or if there aren't enough characters left at the
 end of the input, then an exception will be thrown.
 
 Both uppercase and lowercase letters may be used in hexadecimal digits.
-
-=for comment
-vi:ts=4 sw=4 expandtab

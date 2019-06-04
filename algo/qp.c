@@ -268,5 +268,3 @@ algo_qp_encode (Filter *filter,
     filter->buf_out_end = out;
     return in;
 }
-
-/* vi:set ts=4 sw=4 expandtab: */

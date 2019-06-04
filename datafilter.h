@@ -7,4 +7,3 @@
 int luaopen_datafilter (lua_State *L);
 
 #endif  /* INC_LUA_DATAFILTER_H */
-/* vi:set ts=4 sw=4 expandtab: */

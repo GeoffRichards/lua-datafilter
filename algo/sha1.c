@@ -142,5 +142,3 @@ algo_sha1 (Filter *filter,
 }
 
 #undef rotate
-
-/* vi:set ts=4 sw=4 expandtab: */

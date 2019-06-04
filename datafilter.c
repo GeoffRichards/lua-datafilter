@@ -722,5 +722,3 @@ luaopen_datafilter (lua_State *L) {
 
     return 1;
 }
-
-/* vi:set ts=4 sw=4 expandtab: */

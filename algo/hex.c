@@ -91,5 +91,3 @@ algo_hex_decode (Filter *filter,
     filter->buf_out_end = out;
     return in;
 }
-
-/* vi:set ts=4 sw=4 expandtab: */

@@ -39,5 +39,3 @@ algo_adler32 (Filter *filter,
 
     return in;
 }
-
-/* vi:set ts=4 sw=4 expandtab: */

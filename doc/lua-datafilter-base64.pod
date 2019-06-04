@@ -89,6 +89,3 @@ Setting this to C<true> will silence the error which would normally
 be produced if the padding C<=> characters are missing from the input.
 
 =back
-
-=for comment
-vi:ts=4 sw=4 expandtab

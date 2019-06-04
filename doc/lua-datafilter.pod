@@ -276,6 +276,3 @@ module from the Kepler project, which is by Roberto Ierusalimschy and
 Marcela Ozro Suarez, and Copyright E<copy> 2003E<ndash>2007 PUC-Rio.
 This version has been extensively modified to fit into the DataFilter
 architecture, so any bugs are likely my fault.
-
-=for comment
-vi:ts=4 sw=4 expandtab

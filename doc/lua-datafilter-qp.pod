@@ -41,6 +41,3 @@ C<qp_encode>, and remove soft line breaks.  The real line endings in
 the input will be normalized to linefeed characters.
 
 C<qp_decode> currently doesn't accept any options.
-
-=for comment
-vi:ts=4 sw=4 expandtab

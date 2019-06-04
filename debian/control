@@ -2,12 +2,18 @@ Source: lua-datafilter
 Section: interpreters
 Priority: optional
 Maintainer: Geoff Richards <geoff@geoffrichards.co.uk>
-Build-Depends: cdbs (>= 0.4.23-1.1), debhelper (>= 5), dpatch, lua5.1-policy-dev (>= 22)
-Standards-Version: 3.7.2
+Build-Depends: debhelper (>= 9), dh-lua
+Standards-Version: 3.9.3
+Homepage: https://geoffrichards.co.uk/lua/datafilter/
+Vcs-Browser: https://github.com/GeoffRichards/lua-datafilter
 
-Package: liblua5.1-datafilter0
+Package: lua-datafilter
 Architecture: any
-Depends: ${shlibs:Depends}
+Multi-Arch: same
+Pre-Depends: ${misc:Pre-Depends}
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Provides: ${lua:Provides}
+XB-Lua-Versions: ${lua:Versions}
 Description: useful data-munging algorithms for Lua
  This Lua library makes it convenient to process data using various
  algorithms, and to handle arbitrarily large amounts of input and output data
@@ -19,14 +25,19 @@ Description: useful data-munging algorithms for Lua
  encoding and decoding.
  .
  The latest source code and documentation is always available from the
- module's website: <http://www.geoffrichards.co.uk/lua/datafilter/>
+ module's website: <https://geoffrichards.co.uk/lua/datafilter/>
 
-Package: liblua5.1-datafilter-dev
+Package: lua-datafilter-dev
+Section: libdevel
 Architecture: any
-Depends: liblua5.1-datafilter0 (= ${binary:Version})
+Multi-Arch: same
+Pre-Depends: ${misc:Pre-Depends}
+Depends: lua-datafilter (= ${binary:Version}), ${misc:Depends}
+Provides: ${lua:Provides}
+XB-Lua-Versions: ${lua:Versions}
 Description: documentation for the Lua datafilter module
- This package contains documentation for the liblua5.1-datafilter package,
+ This package contains documentation for the lua-datafilter package,
  in several man pages, the main one being lua-datafilter(3).  These describe
  the complete API of the Lua module.  A more attractive version of the same
  thing is available on the module's website:
- <http://www.geoffrichards.co.uk/lua/datafilter/doc/>
+ <https://geoffrichards.co.uk/lua/datafilter/doc/>

@@ -1,6 +1,7 @@
 *.lo
 *.o
 .libs
+5.3-datafilter
 algorithms.c
 app
 app.c

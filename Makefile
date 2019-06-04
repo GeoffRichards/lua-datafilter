@@ -15,7 +15,7 @@ LIBDIR = $(PREFIX)/lib
 # Uncomment this to run the regression tests with valgrind.
 #VALGRIND = valgrind -q --leak-check=yes --show-reachable=yes --num-callers=10
 
-OBJECTS = filter.lo
+OBJECTS = datafilter.lo
 SOURCES := $(OBJECTS:.lo=.c)
 
 LIBTOOL := libtool
@@ -91,7 +91,7 @@ checktmp:
 	    echo "Can't proceed if file 'tmp' exists"; \
 	    false; \
 	fi
-dist: all checktmp
+dist: all checktmp runtests.lua
 	mkdir -p tmp/$(DISTNAME)
 	tar cf - --files-from MANIFEST | (cd tmp/$(DISTNAME) && tar xf -)
 	cd tmp && tar cf - $(DISTNAME) | gzip -9 >../$(DISTNAME).tar.gz
@@ -102,11 +102,11 @@ dist: all checktmp
 %.lo: %.c
 	@echo 'CC>' $@
 	@$(LIBTOOL) --mode=compile $(CC) $(CFLAGS) $(DEBUG) -c -o $@ $<
-liblua-datafilter.la: filter.lo
+liblua-datafilter.la: datafilter.lo
 	@echo 'LD>' $@
 	@$(LIBTOOL) --mode=link $(CC) $(LDFLAGS) $(DEBUG) -o $@ $< -rpath $(LIBDIR)
 
-filter.lo: filter.c datafilter.h algorithms.c algo/base64.c algo/qp.c algo/pctenc.c algo/md5.c algo/sha1.c algo/adler32.c algo/hex.c algorithms.c
+datafilter.lo: datafilter.c datafilter.h algorithms.c algo/base64.c algo/qp.c algo/pctenc.c algo/md5.c algo/sha1.c algo/adler32.c algo/hex.c algorithms.c
 
 algorithms.c: algorithms.txt algorithms.pl
 	./algorithms.pl $< $@

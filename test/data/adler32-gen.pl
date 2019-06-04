@@ -25,5 +25,3 @@ for my $bytes (1 .. 256) {
     my $hash = hash($bytes);
     print "    \"$hash\",\n";
 }
-
-# vi:ts=4 sw=4 expandtab

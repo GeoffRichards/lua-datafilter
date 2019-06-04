@@ -65,5 +65,3 @@ for (@algo) {
         "    return algo_wrapper(L, &filter_algorithms[$_->{index}]);\n",
         "}\n";
 }
-
-# vi:ts=4 sw=4 expandtab
