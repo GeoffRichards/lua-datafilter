@@ -8,10 +8,10 @@
  * but is released under the same license, that of Lua 5.0.
  */
 
-typedef unsigned long WORD32;
+#include <stdint.h>
 
 /*
-** Realiza a rotacao no sentido horario dos bits da variavel 'D' do tipo WORD32.
+** Realiza a rotacao no sentido horario dos bits da variavel 'D' do tipo uint32_t.
 ** Os bits sao deslocados de 'num' posicoes
 */
 #define rotate(D, num) (D << num) | (D >> (32 - num))
@@ -23,7 +23,7 @@ typedef unsigned long WORD32;
 #define I(x, y, z) ((y) ^ ((x) | (~(z))))
 
 /* vetor de numeros utilizados pelo algoritmo md5 para embaralhar bits */
-static const WORD32
+static const uint32_t
 md5_T[64] = {
     0xd76aa478, 0xe8c7b756, 0x242070db, 0xc1bdceee,
     0xf57c0faf, 0x4787c62a, 0xa8304613, 0xfd469501,
@@ -45,10 +45,10 @@ md5_T[64] = {
 #define T md5_T
 
 static void
-md5_word32tobytes (const WORD32 *input, unsigned char *output) {
+md5_word32tobytes (const uint32_t *input, uint8_t *output) {
     int j = 0;
     while (j<4*4) {
-        WORD32 v = *input++;
+        uint32_t v = *input++;
         output[j++] = (v & 0xFF); v >>= 8;
         output[j++] = (v & 0xFF); v >>= 8;
         output[j++] = (v & 0xFF); v >>= 8;
@@ -58,9 +58,9 @@ md5_word32tobytes (const WORD32 *input, unsigned char *output) {
 
 /* funcao que implemeta os quatro passos principais do algoritmo MD5 */
 static void
-md5_digest (const WORD32 *m, WORD32 *d) {
+md5_digest (const uint32_t *m, uint32_t *d) {
     int j;
-    WORD32 d_old[4];
+    uint32_t d_old[4];
 
     d_old[0] = d[0];
     d_old[1] = d[1];
@@ -138,20 +138,19 @@ md5_digest (const WORD32 *m, WORD32 *d) {
 }
 
 static void
-md5_bytestoword32 (WORD32 *x, const unsigned char *pt) {
-    int i;
-    for (i = 0; i < 16; i++) {
+md5_bytestoword32 (uint32_t *x, const uint8_t *pt) {
+    for (int i = 0; i < 16; i++) {
         int j = i * 4;
-        x[i] = (((WORD32) pt[j+3] << 8 |
-                 (WORD32) pt[j+2]) << 8 |
-                 (WORD32) pt[j+1]) << 8 |
-                 (WORD32) pt[j];
+        x[i] = (((uint32_t) pt[j+3] << 8 |
+                 (uint32_t) pt[j+2]) << 8 |
+                 (uint32_t) pt[j+1]) << 8 |
+                 (uint32_t) pt[j];
     }
 }
 
 typedef struct MD5State_ {
-    WORD32 d[4];
-    unsigned long len_low, len_high; /* assume 32 bit each for 64 bit length */
+    uint32_t d[4];
+    uint32_t len_low, len_high;     // split up, so doesn't rely on 64 bit nums
 } MD5State;
 
 static int
@@ -174,11 +173,11 @@ algo_md5 (Filter *filter,
           unsigned char *out, unsigned char *out_max, int eof)
 {
     MD5State *decoder_state = ALGO_STATE(filter);
-    WORD32 *d = decoder_state->d;
-    WORD32 wbuff[16];
-    unsigned char buff[64];
+    uint32_t *d = decoder_state->d;
+    uint32_t wbuff[16];
+    uint8_t buff[64];
     const unsigned char *in_start = in;
-    unsigned long num_bits;
+    uint32_t num_bits;
 
     while (in_end - in >= 64) {
         md5_bytestoword32(wbuff, in);
@@ -231,5 +230,3 @@ algo_md5 (Filter *filter,
 #undef H
 #undef I
 #undef T
-
-/* vi:set ts=4 sw=4 expandtab: */

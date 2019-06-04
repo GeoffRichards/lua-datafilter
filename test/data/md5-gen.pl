@@ -1,7 +1,7 @@
 #!/usr/bin/perl -w
 use strict;
 
-# Generate the MD5 hash data for the 't/md5.lua' test program.  We use the
+# Generate the MD5 hash data for the 'test/40_md5.lua' tests.  We use the
 # system 'md5sum' program since that's likely to be reliable.
 
 sub hash {
@@ -30,5 +30,3 @@ for my $bytes (1 .. 256) {
 }
 
 unlink 'hashtmp' or die $!;
-
-# vi:ts=4 sw=4 expandtab

@@ -13,7 +13,7 @@ local misc_mapping = {
      "78901234567890"] = "57edf4a22be3c955ac49da2e2107b67a",
 }
 
--- Data calculated with a bit of Perl code (in the file 't/md5-gen.pl') where
+-- Data calculated with a bit of Perl code (in the file 'test/data/md5-gen.pl') where
 -- each entry in the array is for a chunk of data of as many bytes as its
 -- index, and the bytes all progress in a simple way.
 local progressive_md5_expected = {
@@ -306,6 +306,6 @@ function test_gradual_size_increase ()
         local got = Filter.md5(input)
         is(16, got:len())
         is(expected, bytes_to_hex(got),
-           "MD5 of " .. string.format("%q", input))
+           "MD5 of " .. string.format("%q", input) .. ", with i=" .. i)
     end
 end
