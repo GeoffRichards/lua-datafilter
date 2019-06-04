@@ -1,7 +1,4 @@
-require "datafilter-test"
-local Filter = require "datafilter"
-
-module("test.options", lunit.testcase, package.seeall)
+local _ENV = TEST_CASE "test.options"
 
 function test_module_metadata ()
     is("string", type(Filter._VERSION))
@@ -73,5 +70,3 @@ function test_handle_init_error_oo ()
     assert_error("bad type for line_ending option",
                  function () Filter:new("base64_encode", nil, options) end)
 end
-
--- vi:ts=4 sw=4 expandtab

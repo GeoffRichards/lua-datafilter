@@ -1,7 +1,4 @@
-require "datafilter-test"
-local Filter = require "datafilter"
-
-module("test.sha1", lunit.testcase, package.seeall)
+local _ENV = TEST_CASE "test.sha1"
 
 local misc_mapping = {
     [""] = "da39a3ee5e6b4b0d3255bfef95601890afd80709",
@@ -312,5 +309,3 @@ function test_gradual_size_increase ()
            "SHA1 of " .. string.format("%q", input))
     end
 end
-
--- vi:ts=4 sw=4 expandtab

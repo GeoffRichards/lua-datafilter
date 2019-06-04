@@ -15,4 +15,5 @@ lua-datafilter-*.tar.bz2
 lua-datafilter-*.tar.gz
 lua5.1-datafilter.pc
 pkg-config.pc.in
+runtests.lua
 static-stamp.datafilter

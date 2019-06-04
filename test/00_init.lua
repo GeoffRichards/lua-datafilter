@@ -1,10 +1,12 @@
--- This will load the new copy of the library on Unix systems where it's built
--- with libtool.
+-- This will load the new copy of the library on Unix systems where it's built with libtool.
 package.cpath = ".libs/liblua-?.so;" .. package.cpath
 
-require "lunit"
+package.path = "lunit/?.lua;" .. package.path
+local lunit = require "lunit"
+local TEST_CASE = lunit.TEST_CASE
+local is = lunit.assert_equal
 
-is = lunit.assert_equal
+local Filter = require "datafilter"
 
 function read_file (filename)
     local fh = io.open(filename, "rb")
@@ -25,5 +27,3 @@ function bytes_to_hex (s)
     end
     return hex
 end
-
--- vi:ts=4 sw=4 expandtab

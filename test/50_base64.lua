@@ -1,7 +1,4 @@
-require "datafilter-test"
-local Filter = require "datafilter"
-
-module("test.base64", lunit.testcase, package.seeall)
+local _ENV = TEST_CASE "test.base64"
 
 local misc_mapping = {
     -- Test data from RFC 4648, section 10
@@ -533,5 +530,3 @@ function test_bad_usage ()
     assert_error("max_line_length must not be negative",
                  function () Filter.base64_encode("foo", options) end)
 end
-
--- vi:ts=4 sw=4 expandtab

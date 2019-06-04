@@ -1,7 +1,4 @@
-require "datafilter-test"
-local Filter = require "datafilter"
-
-module("test.qp", lunit.testcase, package.seeall)
+local _ENV = TEST_CASE "test.qp"
 
 local x70 = ("x"):rep(70)
 
@@ -149,5 +146,3 @@ function test_bad_usage ()
     assert_error("bad type for line_ending option",
                  function () Filter.qp_encode("foo", options) end)
 end
-
--- vi:ts=4 sw=4 expandtab

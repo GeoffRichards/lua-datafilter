@@ -1,7 +1,4 @@
-require "datafilter-test"
-local Filter = require "datafilter"
-
-module("test.hex", lunit.testcase, package.seeall)
+local _ENV = TEST_CASE "test.hex"
 
 local misc_binary_data = {
     "",
@@ -104,5 +101,3 @@ function test_decode_hex_bad ()
     assert_error("odd number of digits",
                  function () Filter.hex_decode("01 23 7 ") end)
 end
-
--- vi:ts=4 sw=4 expandtab

@@ -1,7 +1,4 @@
-require "datafilter-test"
-local Filter = require "datafilter"
-
-module("test.output", lunit.testcase, package.seeall)
+local _ENV = TEST_CASE "test.output"
 
 local big_expected = ("YWJjZGVmZ2hpamts"):rep(8192)
 
@@ -189,5 +186,3 @@ function test_reusing_file_handle ()
     is("Zm9vYmFy\nZnJvYm5pdHo=\n", read_file(tmpname))
     assert(os.remove(tmpname))
 end
-
--- vi:ts=4 sw=4 expandtab

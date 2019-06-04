@@ -1,7 +1,4 @@
-require "datafilter-test"
-local Filter = require "datafilter"
-
-module("test.md5", lunit.testcase, package.seeall)
+local _ENV = TEST_CASE "test.md5"
 
 local misc_mapping = {
     -- Test data from RFC 1321, appendix 5
@@ -312,5 +309,3 @@ function test_gradual_size_increase ()
            "MD5 of " .. string.format("%q", input))
     end
 end
-
--- vi:ts=4 sw=4 expandtab

@@ -1,7 +1,4 @@
-require "datafilter-test"
-local Filter = require "datafilter"
-
-module("test.adler32", lunit.testcase, package.seeall)
+local _ENV = TEST_CASE "test.adler32"
 
 local misc_mapping = {
     -- Test data from the test suite of the Digest::Adler32 Perl module
@@ -308,5 +305,3 @@ function test_gradual_size_increase ()
            "Adler32 of " .. string.format("%q", input))
     end
 end
-
--- vi:ts=4 sw=4 expandtab

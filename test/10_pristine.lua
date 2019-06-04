@@ -1,6 +1,4 @@
-require "datafilter-test"
-
-module("test.pristine", lunit.testcase, package.seeall)
+local _ENV = TEST_CASE "test.pristine"
 
 function test_no_global_clobbering ()
     local globals = {}
@@ -17,5 +15,3 @@ function test_no_global_clobbering ()
                              "global '" .. key .. "' destroyed by lib")
     end
 end
-
--- vi:ts=4 sw=4 expandtab

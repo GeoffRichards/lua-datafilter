@@ -1,7 +1,4 @@
-require "datafilter-test"
-local Filter = require "datafilter"
-
-module("test.pctenc", lunit.testcase, package.seeall)
+local _ENV = TEST_CASE "test.pctenc"
 
 local default_charset_mapping = {
     [""] = "",
@@ -105,5 +102,3 @@ function test_bad_usage ()
     assert_error("don't repeat declaration of same safe byte",
                  function () Filter.percent_encode("x%y", options) end)
 end
-
--- vi:ts=4 sw=4 expandtab

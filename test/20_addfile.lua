@@ -1,7 +1,4 @@
-require "datafilter-test"
-local Filter = require "datafilter"
-
-module("test.addfile", lunit.testcase, package.seeall)
+local _ENV = TEST_CASE "test.addfile"
 
 function test_from_file ()
     local obj = Filter:new("md5")
@@ -146,5 +143,3 @@ function test_bad_usage ()
                  function () obj:addfile("COPYRIGHT") end)
     is("acbd18db4cc2f85cedef654fccc4a4d8", bytes_to_hex(obj:result()))
 end
-
--- vi:ts=4 sw=4 expandtab
